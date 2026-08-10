@@ -185,6 +185,8 @@ npm run preview
 - Most pages are lazy-loaded through `src/routes/AppRoutes.tsx` for faster initial load.
 - The AI assistant keeps conversations locally so users can continue a chat across refreshes.
 
-## Why this README
+## Backend deployment note
 
-This README is written to explain the app like a teammate would: what the app does, how the pages connect, and what each backend API is responsible for. If you want, I can also add a short section showing where each page component lives and how it calls its matching service method.
+The backend is deployed on Render using the free tier, so it will go into idle/shutdown mode after about 10 minutes of inactivity. For that reason, the first request after a period of inactivity can take up to **~2 minutes** while Render wakes the service back up.
+
+> Because the backend is on Render free, the app may feel slow on the first request after a break. Subsequent requests are much faster until the service idles again.
