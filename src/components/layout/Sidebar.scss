@@ -12,7 +12,6 @@
   overflow: hidden;
   background-color: #05172d;
   box-shadow: inset -4px 0 30px rgba(0, 0, 0, 0.25);
-  position: relative;
 
   .sidebar-background {
     position: absolute;
@@ -148,5 +147,47 @@
     p {
       margin: 0;
     }
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    width: min(280px, 85vw);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-height: 100vh;
+    padding-bottom: 16px;
+    border-radius: 0;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  }
+
+  .sidebar-background {
+    display: none;
+  }
+
+  .sidebar-brand {
+    justify-content: center;
+    text-align: center;
+    padding: 18px 16px;
+  }
+
+  .sidebar-nav {
+    padding: 0 12px 8px;
+  }
+
+  .sidebar-nav ul {
+    gap: 8px;
+  }
+
+  .sidebar-nav .nav-link,
+  .sidebar-nav .logout-btn {
+    padding: 12px 14px;
+    font-size: $font-size-small;
+  }
+
+  .sidebar-footer {
+    padding: 14px 16px;
   }
 }

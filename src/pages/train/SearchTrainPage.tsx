@@ -217,6 +217,19 @@ export default function SearchTrainPage() {
       const raw = response as Record<string, unknown>;
       const data = (raw.data && typeof raw.data === "object" ? (raw.data as Record<string, unknown>) : raw) as Record<string, unknown>;
 
+      const extractString = (...keys: string[]) => {
+        for (const key of keys) {
+          const value = data[key];
+          if (typeof value === "string" && value.trim()) return value.trim();
+          if (typeof value === "object" && value !== null) {
+            const nested = value as Record<string, unknown>;
+            if (typeof nested.text === "string" && nested.text.trim()) return nested.text.trim();
+            if (typeof nested.message === "string" && nested.message.trim()) return nested.message.trim();
+          }
+        }
+        return undefined;
+      };
+
       const normalizeTrainReference = (value: unknown) => {
         if (!value || typeof value !== "object") return undefined;
         const train = value as Record<string, unknown>;
@@ -225,18 +238,35 @@ export default function SearchTrainPage() {
             ? train.number
             : typeof train.trainNumber === "string" || typeof train.trainNumber === "number"
             ? train.trainNumber
+            : typeof train.id === "string" || typeof train.id === "number"
+            ? train.id
             : undefined;
         return number !== undefined ? { number } : undefined;
       };
 
       return {
         insightMessage:
-          (typeof data.insightMessage === "string" && data.insightMessage) ||
-          (typeof data.message === "string" && data.message) ||
-          (typeof data.response === "string" && data.response) ||
-          undefined,
-        fastestTrain: normalizeTrainReference(data.fastestTrain),
-        longestTrain: normalizeTrainReference(data.longestTrain),
+          extractString(
+            "insightMessage",
+            "message",
+            "response",
+            "text",
+            "summary",
+            "prediction",
+            "analysis",
+            "description",
+            "recommendation",
+          ),
+        fastestTrain:
+          normalizeTrainReference(data.fastestTrain) ||
+          normalizeTrainReference(data.fastest) ||
+          normalizeTrainReference(data.quickestTrain) ||
+          normalizeTrainReference(data.bestTrain),
+        longestTrain:
+          normalizeTrainReference(data.longestTrain) ||
+          normalizeTrainReference(data.overnightTrain) ||
+          normalizeTrainReference(data.bestOvernightTrain) ||
+          normalizeTrainReference(data.slowestTrain),
       };
     }
 

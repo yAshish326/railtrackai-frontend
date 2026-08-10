@@ -15,7 +15,11 @@ function getInitials(name?: string): string {
   );
 }
 
-export default function Navbar() {
+interface NavbarProps {
+  onToggleSidebar: () => void;
+}
+
+export default function Navbar({ onToggleSidebar }: NavbarProps) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [query, setQuery] = useState("");
@@ -95,6 +99,11 @@ export default function Navbar() {
 
   return (
     <header className="top-header">
+      <button type="button" className="mobile-menu-btn" aria-label="Open navigation menu" onClick={onToggleSidebar}>
+        <span />
+        <span />
+        <span />
+      </button>
       <div className="search-bar" ref={wrapperRef}>
         <Search size={18} className="search-icon" />
         <input

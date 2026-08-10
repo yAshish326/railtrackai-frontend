@@ -30,12 +30,18 @@ const NAV_ITEMS = [
   { to: ROUTES.SETTINGS, label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const navRef = useRef<HTMLElement | null>(null);
 
   const handleLogout = () => {
     authStore.logout();
+    onClose();
     window.location.replace(ROUTES.LANDING);
   };
 
@@ -46,7 +52,7 @@ export default function Sidebar() {
   }, [location.pathname]);
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? " open" : ""}`}>
       <div className="sidebar-background" aria-hidden="true" />
       <div className="sidebar-brand">
         <div className="brand-logo">
@@ -62,6 +68,7 @@ export default function Sidebar() {
               <NavLink
                 to={to}
                 className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+                onClick={onClose}
               >
                 <Icon size={18} />
                 <span>{label}</span>

@@ -157,6 +157,8 @@
     }
 
     .verify-otp-card {
+        width: 100%;
+        max-width: 100%;
         padding: 28px 18px;
         border-radius: 22px;
     }
@@ -167,5 +169,15 @@
 
     .verify-otp-card .subtitle {
         font-size: $font-size-small;
+    }
+
+    .verify-otp-card input {
+        min-height: 48px;
+        padding: 14px 16px;
+    }
+
+    .verify-otp-card button,
+    .verify-otp-card .resend-btn {
+        min-height: 50px;
     }
 }
