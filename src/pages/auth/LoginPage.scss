@@ -503,9 +503,11 @@
 
 @media (max-width: 620px) {
     .login-page {
-        align-items: flex-start;
-        min-height: auto;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
         padding: 20px 14px 30px;
+        min-height: -webkit-fill-available;
     }
 
     .login-brand {
@@ -517,6 +519,8 @@
         max-width: 100%;
         padding: 28px 18px;
         border-radius: 20px;
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2);
+        margin: auto 0;
     }
 
     .login-form-card h1 {
@@ -527,12 +531,21 @@
         font-size: $font-size-label;
     }
 
+    .login-form-card form {
+        gap: 16px;
+    }
+
     .login-form-card .field {
         gap: 10px;
     }
 
+    .login-form-card .field span {
+        font-size: $font-size-label;
+    }
+
     .login-form-card input {
-        min-height: 48px;
+        min-height: 46px;
+        padding: 14px 16px;
     }
 
     .login-form-card .password-toggle {
@@ -545,9 +558,33 @@
         justify-content: center;
     }
 
+    .login-form-card button,
+    .login-form-card .submit-button {
+        min-height: 50px;
+    }
+
     .login-form-card .switch-auth {
         font-size: $font-size-small;
         line-height: 1.5;
+    }
+}
+
+@media (max-width: 520px) {
+    .login-form-card {
+        padding: 22px 14px;
+        border-radius: 18px;
+    }
+
+    .login-form-card input {
+        padding: 13px 14px;
+    }
+
+    .login-form-card .field {
+        gap: 8px;
+    }
+
+    .login-form-card .switch-auth {
+        font-size: $font-size-small;
     }
 }
 

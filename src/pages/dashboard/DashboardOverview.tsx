@@ -223,7 +223,7 @@ export default function DashboardOverview() {
           <div className="hero-card-inner">
             <div>
               <p className="hero-label">{getGreeting()}, {userName} <span aria-hidden="true">👋</span></p>
-              <h1>Good morning, {userName}</h1>
+              <h1>Hello, {userName}</h1>
               <p className="hero-copy">Here&apos;s what&apos;s happening with your travel today.</p>
             </div>
 
