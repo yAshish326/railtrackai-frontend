@@ -1,0 +1,595 @@
+// =========================================================
+// LIVE TRAIN STATUS — design tokens
+// Same system as PnrEnquiryPage.scss: colors live in CSS
+// custom properties scoped to the page root, and dark mode
+// is OPT-IN ONLY — it switches when a theme toggle adds
+// `.dark` or `[data-theme="dark"]` up the tree. There is no
+// automatic prefers-color-scheme fallback, so the page stays
+// light unless the user explicitly switches.
+// =========================================================
+
+@mixin ent-dark-theme {
+  --ent-ink:         #eef1f8;
+  --ent-ink-soft:    #0d1220;
+  --ent-surface:     #12172a;
+  --ent-surface-alt: #161c33;
+  --ent-app-bg:      #0b0f1d;
+  --ent-border:      #232a44;
+  --ent-slate:       #a3aac2;
+  --ent-slate-soft:  #6c7590;
+
+  --ent-accent:      #6f8bff;
+  --ent-accent-ink:  #c2cdff;
+  --ent-accent-soft: rgba(111, 139, 255, 0.16);
+
+  --ent-green:  #4ade80; --ent-green-bg:  rgba(74, 222, 128, 0.14);
+  --ent-amber:  #fbbf24; --ent-amber-bg:  rgba(251, 191, 36, 0.14);
+  --ent-red:    #f87171; --ent-red-bg:    rgba(248, 113, 113, 0.14);
+  --ent-gray:   #9aa2b8; --ent-gray-bg:   rgba(154, 162, 184, 0.14);
+
+  --ent-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --ent-input-bg: #0d1327;
+  --ent-map-filter: brightness(0.62) invert(1) contrast(3) hue-rotate(200deg)
+    saturate(0.3) brightness(0.72);
+}
+
+.enterprise-page {
+  // ---- light theme (default) ----
+  --ent-ink:         #0b1526;
+  --ent-ink-soft:    #ffffff;
+  --ent-surface:     #ffffff;
+  --ent-surface-alt: #fbfbff;
+  --ent-app-bg:      #f3f5fa;
+  --ent-border:      #e6e9f2;
+  --ent-slate:       #5b6478;
+  --ent-slate-soft:  #8a91a3;
+
+  --ent-accent:      #3b5bfd;
+  --ent-accent-ink:  #1e2f8a;
+  --ent-accent-soft: rgba(59, 91, 253, 0.1);
+
+  --ent-green:  #16a34a; --ent-green-bg:  #eafaf0;
+  --ent-amber:  #d97706; --ent-amber-bg:  #fef6e7;
+  --ent-red:    #dc2626; --ent-red-bg:    #fdecec;
+  --ent-gray:   #6b7280; --ent-gray-bg:   #f1f2f6;
+
+  --ent-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.10);
+  --ent-input-bg: var(--ent-app-bg);
+  --ent-map-filter: none;
+
+  // ---- dark theme — only when explicitly toggled ----
+  &.dark,
+  &[data-theme="dark"],
+  html.dark-mode & {
+    @include ent-dark-theme;
+  }
+}
+
+$radius-sm: 10px;
+$radius-md: 14px;
+$radius-lg: 18px;
+
+@mixin eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ent-accent);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+// =========================================================
+// PAGE SHELL
+// =========================================================
+
+.enterprise-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 4px;
+  color: var(--ent-ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+// shared card shell, reused by every panel on this page
+%card {
+  background: var(--ent-surface);
+  border: 1px solid var(--ent-border);
+  border-radius: $radius-lg;
+  box-shadow: var(--ent-shadow);
+}
+
+.enterprise-card { @extend %card; padding: 20px 22px; }
+
+// =========================================================
+// HEADER — padded card, same treatment as the other pages
+// =========================================================
+
+.enterprise-header {
+  @extend %card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 32px 36px;
+
+  .eyebrow { @include eyebrow; display: block; margin-bottom: 6px; }
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  p {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    color: var(--ent-slate);
+    max-width: 50ch;
+  }
+}
+
+// =========================================================
+// SEARCH CARD — train number + date + submit, one row
+// =========================================================
+
+.live-status-search-card { padding: 18px 22px; }
+
+.live-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ent-slate-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  input {
+    height: 42px;
+    padding: 0 12px;
+    border-radius: $radius-sm;
+    border: 1px solid var(--ent-border);
+    background: var(--ent-input-bg);
+    outline: none;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ent-ink);
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+    &::placeholder { font-weight: 400; color: var(--ent-slate-soft); }
+
+    &:focus {
+      border-color: var(--ent-accent);
+      background: var(--ent-surface);
+      box-shadow: 0 0 0 3px var(--ent-accent-soft);
+    }
+  }
+}
+
+.journey-date-field { max-width: 200px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+
+  &:active:not(:disabled) { transform: translateY(1px); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.btn-primary {
+  background: var(--ent-accent);
+  color: #fff;
+
+  &:hover:not(:disabled) { background: var(--ent-accent-ink); }
+}
+
+.live-status-button { flex-shrink: 0; }
+
+// =========================================================
+// ERROR BANNER
+// =========================================================
+
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--ent-red-bg);
+  border-color: var(--ent-red);
+  color: var(--ent-red);
+
+  svg { flex-shrink: 0; margin-top: 1px; }
+
+  strong { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 2px; }
+  p { margin: 0; font-size: 13px; color: var(--ent-red); opacity: 0.9; }
+}
+
+// =========================================================
+// SKELETON LOADING
+// =========================================================
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.skeleton-card {
+  height: 120px;
+  border-radius: $radius-md;
+  background: linear-gradient(
+    90deg,
+    var(--ent-app-bg) 25%,
+    var(--ent-border) 50%,
+    var(--ent-app-bg) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+// =========================================================
+// RESULTS LAYOUT — side-by-side cards on desktop
+// =========================================================
+
+.route-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.route-layout > article {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.live-route-map-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.route-map-wrap {
+  flex: 1;
+  min-height: 440px;
+}
+
+// =========================================================
+// HERO CARD
+// =========================================================
+
+.live-hero-card { padding: 22px 24px; }
+
+.live-hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--ent-border);
+
+  h2 {
+    margin: 6px 0 4px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.live-eyebrow { @include eyebrow; display: block; }
+
+.hero-status-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ent-slate);
+}
+
+.hero-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+
+  &.running {
+    background: var(--ent-green-bg);
+    color: var(--ent-green);
+  }
+
+  &.delayed {
+    background: var(--ent-amber-bg);
+    color: var(--ent-amber);
+  }
+}
+
+.hero-update {
+  font-size: 11.5px;
+  color: var(--ent-slate-soft);
+  font-weight: 600;
+}
+
+.live-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.hero-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  > div { min-width: 0; }
+
+  strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ent-ink);
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--ent-slate-soft);
+  }
+}
+
+.hero-section-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ent-slate-soft);
+}
+
+.hero-status-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: $radius-sm;
+  background: var(--ent-app-bg);
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &.on-time { background: var(--ent-green-bg); color: var(--ent-green); }
+  &.delay   { background: var(--ent-red-bg);   color: var(--ent-red); }
+}
+
+.hero-status-caption {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ent-slate);
+  flex: 1;
+}
+
+.live-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.live-summary-card {
+  padding: 14px 16px;
+  border-radius: $radius-sm;
+  background: var(--ent-surface-alt);
+  border: 1px solid var(--ent-border);
+
+  span {
+    display: block;
+    font-size: 11px;
+    color: var(--ent-slate-soft);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  strong {
+    display: block;
+    font-size: 15px;
+    color: var(--ent-ink);
+    font-weight: 700;
+  }
+}
+
+.hero-detail-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.hero-detail-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: $radius-sm;
+  background: var(--ent-app-bg);
+
+  span { font-size: 12px; color: var(--ent-slate); font-weight: 600; }
+  strong { font-size: 14px; font-weight: 700; color: var(--ent-ink); }
+}
+
+// =========================================================
+// MAP CARD
+// =========================================================
+
+.map-card { padding: 20px 22px; }
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  svg { color: var(--ent-accent); flex-shrink: 0; }
+
+  h3 { margin: 0; font-size: 15.5px; font-weight: 700; }
+}
+
+.route-map-wrap {
+  position: relative;
+  z-index: 0;
+  min-height: 440px;
+  height: 100%;
+  border-radius: $radius-md;
+  overflow: hidden;
+  border: 1px solid var(--ent-border);
+}
+
+.route-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  background: var(--ent-app-bg);
+
+  .leaflet-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  // Gently re-tint OSM tiles so the map doesn't look like a bright
+  // hole punched through an otherwise dark page. No-op in light mode.
+  .leaflet-tile-pane {
+    filter: var(--ent-map-filter);
+  }
+
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--ent-surface);
+    color: var(--ent-ink);
+  }
+
+  .leaflet-control-zoom a {
+    background: var(--ent-surface);
+    color: var(--ent-ink);
+    border-color: var(--ent-border);
+  }
+}
+
+.empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px;
+  border-radius: $radius-md;
+  border: 1px dashed var(--ent-border);
+  background: var(--ent-app-bg);
+  color: var(--ent-slate-soft);
+
+  svg { color: var(--ent-slate-soft); }
+
+  p { margin: 0; font-size: 13px; color: var(--ent-slate); }
+
+  &.compact { padding: 36px 20px; }
+}
+
+// =========================================================
+// RESPONSIVE — tablet & mobile
+// =========================================================
+
+@media (max-width: 980px) {
+  .hero-stat-row { grid-template-columns: repeat(2, 1fr); }
+  .route-map-wrap { height: 360px; }
+}
+
+@media (max-width: 720px) {
+  .enterprise-page { gap: 16px; }
+
+  .enterprise-header {
+    padding: 22px 20px;
+    align-items: flex-start;
+
+    h1 { font-size: 22px; }
+  }
+
+  .enterprise-card { padding: 16px; }
+  .live-hero-card { padding: 18px; }
+
+  .live-toolbar { flex-direction: column; align-items: stretch; }
+  .field { min-width: 0; }
+  .journey-date-field { max-width: none; }
+  .live-status-button { width: 100%; }
+
+  .live-hero-header { flex-direction: column; }
+  .hero-top-right { align-items: flex-start; }
+
+  .hero-stat-row { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hero-detail-row { grid-template-columns: 1fr; }
+
+  .route-map-wrap { height: 300px; }
+  .skeleton-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .enterprise-page { padding: 0; }
+  .hero-stat-row { grid-template-columns: 1fr; }
+  .route-map-wrap { height: 260px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card { animation: none !important; }
+}

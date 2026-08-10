@@ -1,0 +1,527 @@
+﻿@use "../../assets/styles/variables" as *;
+
+.dashboard-page {
+  display: grid;
+  gap: 24px;
+  background: var(--app-bg);
+}
+
+.dashboard-card {
+  background: var(--surface-strong);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+}
+
+.hero-card {
+  padding: 28px 32px;
+}
+
+.hero-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-blue);
+}
+
+.hero-card h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.hero-copy {
+  margin: 16px 0 0;
+  max-width: 620px;
+  color: var(--text-sub);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.hero-date-panel {
+  text-align: right;
+  min-width: 180px;
+}
+
+.hero-date-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-sub);
+}
+
+.hero-date-value {
+  display: block;
+  margin-top: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stats-card,
+.action-card,
+.recent-activity-card,
+.assistant-card {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.section-header p {
+  margin: 6px 0 0;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.btn-link {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--primary-blue);
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 12px;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.btn-link:hover,
+.btn-link:focus {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.stats-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  border-radius: var(--radius-sm);
+  min-height: 140px;
+}
+
+.stat-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stat-detail {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.6;
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.action-section {
+  padding-top: 20px;
+}
+
+.quick-actions-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--surface-bg);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.quick-action:hover,
+.quick-action:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.quick-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.quick-action-copy span {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dashboard-main-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1120px) {
+  .dashboard-main-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(380px, 1fr);
+  }
+}
+
+.activity-list {
+  display: grid;
+  gap: 12px;
+}
+
+/* Make Recent Activity vertically scrollable on wide layouts */
+.recent-activity-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-activity-card .activity-list {
+  overflow: auto;
+  /* reasonable max height so the dashboard right column remains visible */
+  max-height: 500px;
+  padding-right: 6px; /* avoid content touching scrollbar */
+}
+
+/* Thin custom scrollbar for modern browsers */
+.recent-activity-card .activity-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.recent-activity-card .activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.recent-activity-card .activity-list::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  border: 2px solid var(--surface-strong);
+}
+
+/* On small screens allow the list to expand naturally */
+@media (max-width: 1119px) {
+  .recent-activity-card .activity-list { max-height: none; overflow: visible; padding-right: 0; }
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  text-align: left;
+}
+
+.activity-row:hover,
+.activity-row:focus-visible {
+  border-color: rgba(37, 99, 235, 0.16);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.activity-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+
+.activity-info {
+  display: grid;
+  gap: 4px;
+}
+
+.activity-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.activity-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.activity-time {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.activity-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.activity-meta {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.assistant-content {
+  display: grid;
+  gap: 18px;
+}
+
+.assistant-bubble {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  padding: 18px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.assistant-avatar {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.chip-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .chip-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.suggestion-chip {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--surface-bg);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.suggestion-chip:hover,
+.suggestion-chip:focus-visible {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.assistant-input-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr auto;
+}
+
+.assistant-input-row input {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--text-main);
+  background: var(--surface-bg);
+}
+
+.assistant-input-row input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.7);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.btn-icon {
+  min-width: 52px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.empty-state.compact {
+  display: grid;
+  gap: 14px;
+  align-items: center;
+  justify-items: center;
+  padding: 40px 0;
+  color: var(--text-sub);
+}
+
+.empty-state.compact svg {
+  color: var(--primary-blue);
+}
+
+/* Dark mode overrides */
+html.dark-mode {
+  background: #060812;
+}
+
+html.dark-mode .dashboard-page {
+  background: #090b14;
+}
+
+html.dark-mode .dashboard-card,
+html.dark-mode .stat-card,
+html.dark-mode .quick-action,
+html.dark-mode .assistant-bubble,
+html.dark-mode .assistant-input-row input,
+html.dark-mode .activity-row {
+  background: #0f172a;
+}
+
+html.dark-mode .dashboard-card,
+html.dark-mode .stat-card,
+html.dark-mode .quick-action,
+html.dark-mode .assistant-bubble,
+html.dark-mode .activity-row {
+  border-color: #1e293b;
+}
+
+html.dark-mode .hero-card,
+html.dark-mode .action-card,
+html.dark-mode .stats-card,
+html.dark-mode .recent-activity-card,
+html.dark-mode .assistant-card {
+  box-shadow: 0 20px 60px rgba(5, 10, 25, 0.15);
+}
+
+html.dark-mode .hero-label,
+html.dark-mode .stat-value,
+html.dark-mode .hero-date-value,
+html.dark-mode .quick-action-copy span,
+html.dark-mode .activity-title,
+html.dark-mode .suggestion-chip,
+html.dark-mode .assistant-input-row input,
+html.dark-mode .btn-link {
+  color: #e2e8f0;
+}
+
+html.dark-mode .hero-copy,
+html.dark-mode .section-header p,
+html.dark-mode .stat-detail,
+html.dark-mode .activity-meta,
+html.dark-mode .activity-time,
+html.dark-mode .empty-state.compact {
+  color: #94a3b8;
+}
+
+html.dark-mode .quick-action:hover,
+html.dark-mode .activity-row:hover,
+html.dark-mode .suggestion-chip:hover,
+html.dark-mode .btn-link:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+html.dark-mode .assistant-input-row input {
+  background: #111827;
+  color: #e2e8f0;
+}
+
+html.dark-mode .btn-link {
+  color: #60a5fa;
+}
+
+html.dark-mode .assistant-avatar {
+  background: rgba(59, 130, 246, 0.16);
+}

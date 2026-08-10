@@ -1,0 +1,26 @@
+@use "./variables" as *;
+
+@mixin card-surface {
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-main);
+}
+
+@mixin elevated-surface {
+  @include card-surface;
+  box-shadow: var(--shadow-card);
+}
+
+@mixin focus-ring($borderColor: #2563eb) {
+  outline: none;
+  border-color: $borderColor;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+@mixin responsive-grid($columns, $gap: var(--space-lg)) {
+  display: grid;
+  gap: $gap;
+  grid-template-columns: repeat($columns, minmax(0, 1fr));
+}

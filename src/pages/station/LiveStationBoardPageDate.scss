@@ -1,0 +1,42 @@
+// =========================================================
+// Journey date field — native <input type="date"> polish
+// Kept in its own file since it's imported separately from
+// LiveStationBoardPage.scss. Relies on the same --ent-*
+// custom properties, so it inherits whatever theme is active
+// on the nearest .enterprise-page ancestor.
+// =========================================================
+
+.journey-date-field input[type="date"] {
+  position: relative;
+  color-scheme: light; // matches the light input chrome by default
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+    padding: 4px;
+    border-radius: 6px;
+    transition: opacity 0.15s ease, background 0.15s ease;
+
+    &:hover { opacity: 0.9; background: var(--ent-accent-soft); }
+  }
+
+  &::-webkit-datetime-edit { color: var(--ent-ink); }
+  &::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+
+  &::-moz-focus-inner { border: 0; }
+}
+
+// In dark mode, tell the browser to render its native date-picker
+// chrome (icon, popup calendar) in dark colors instead of forcing a
+// CSS filter hack on the indicator — this keeps the picker itself
+// legible, not just the closed-field icon.
+.enterprise-page.dark .journey-date-field input[type="date"],
+.enterprise-page[data-theme="dark"] .journey-date-field input[type="date"] {
+  color-scheme: dark;
+}
+
+@media (max-width: 720px) {
+  .journey-date-field input[type="date"] {
+    font-size: 14px; // avoids iOS Safari auto-zoom on focus
+  }
+}

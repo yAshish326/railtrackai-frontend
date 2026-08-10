@@ -1,0 +1,44 @@
+@use "../../assets/styles/variables" as *;
+
+.dashboard-container {
+  position: relative;
+
+  width: 100%;
+  min-height: 100vh;
+
+  overflow: visible;
+
+  background-color: var(--app-bg);
+
+  .main-wrapper {
+    position: fixed;
+
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 240px;
+
+    width: calc(100% - 240px);
+    min-width: 0;
+    min-height: 100vh;
+
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+
+    overflow: visible;
+  }
+
+  .dashboard-content {
+    min-width: 0;
+    min-height: 0;
+
+    padding: 18px 18px 28px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    box-sizing: border-box;
+
+    scrollbar-width: thin;
+  }
+}

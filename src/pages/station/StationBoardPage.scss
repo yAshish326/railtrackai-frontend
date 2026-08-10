@@ -1,0 +1,1634 @@
+// =========================================================
+// STATION BOARD
+// =========================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+$radius-sm: 10px;
+$radius-md: 14px;
+$radius-lg: 18px;
+
+// =========================================================
+// THEME
+// =========================================================
+
+@mixin ent-dark-theme {
+  --ent-ink: #eef1f8;
+  --ent-ink-soft: #0d1220;
+  --ent-surface: #12172a;
+  --ent-surface-alt: #161c33;
+  --ent-app-bg: #0b0f1d;
+  --ent-border: #232a44;
+  --ent-slate: #a3aac2;
+  --ent-slate-soft: #6c7590;
+
+  --ent-accent: #6f8bff;
+  --ent-accent-ink: #c2cdff;
+  --ent-accent-soft: rgba(111, 139, 255, 0.12);
+
+  --ent-green: #16a34a;
+  --ent-green-bg: #eafaf0;
+
+  --ent-amber: #d97706;
+  --ent-amber-bg: #fef6e7;
+
+  --ent-red: #dc2626;
+  --ent-red-bg: #fdecec;
+
+  --ent-gray: #6b7280;
+  --ent-gray-bg: #f1f2f6;
+
+  --ent-purple: #7c3aed;
+  --ent-purple-bg: #f1eaff;
+
+  --ent-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -12px rgba(15, 23, 42, 0.1);
+
+  --ent-input-bg: #f3f5fa;
+}
+
+.enterprise-page {
+  --ent-ink: #0b1526;
+  --ent-ink-soft: #ffffff;
+
+  --ent-surface: #ffffff;
+  --ent-surface-alt: #fbfbff;
+  --ent-app-bg: #f3f5fa;
+
+  --ent-border: #e6e9f2;
+
+  --ent-slate: #5b6478;
+  --ent-slate-soft: #8a91a3;
+
+  --ent-accent: #3b5bfd;
+  --ent-accent-ink: #1e2f8a;
+  --ent-accent-soft: rgba(59, 91, 253, 0.1);
+
+  --ent-green: #16a34a;
+  --ent-green-bg: #eafaf0;
+
+  --ent-amber: #d97706;
+  --ent-amber-bg: #fef6e7;
+
+  --ent-red: #dc2626;
+  --ent-red-bg: #fdecec;
+
+  --ent-gray: #6b7280;
+  --ent-gray-bg: #f1f2f6;
+
+  --ent-purple: #7c3aed;
+  --ent-purple-bg: #f1eaff;
+
+  --ent-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -12px rgba(15, 23, 42, 0.1);
+
+  --ent-input-bg: #f3f5fa;
+
+  &.dark,
+  &[data-theme="dark"],
+  html.dark-mode & {
+    @include ent-dark-theme;
+  }
+}
+
+// =========================================================
+// PAGE
+// =========================================================
+
+.enterprise-page {
+  width: 100%;
+  max-width: 1320px;
+
+  margin: 0 auto;
+
+  padding: 0 4px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 20px;
+
+  color: var(--ent-ink);
+
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+// =========================================================
+// COMMON CARD
+// =========================================================
+
+%card {
+  width: 100%;
+
+  background: var(--ent-surface);
+
+  border: 1px solid var(--ent-border);
+
+  border-radius: $radius-lg;
+
+  box-shadow: var(--ent-shadow);
+}
+
+.enterprise-card {
+  @extend %card;
+
+  padding: 20px 22px;
+}
+
+// =========================================================
+// HEADER
+// =========================================================
+
+.enterprise-header {
+  @extend %card;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  min-height: 148px;
+
+  padding: 32px 36px;
+
+  .eyebrow {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: var(--ent-accent);
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.09em;
+
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0;
+
+    color: var(--ent-ink);
+
+    font-size: 26px;
+
+    font-weight: 700;
+
+    line-height: 1.2;
+  }
+
+  .page-subtitle {
+    max-width: 55ch;
+
+    margin: 7px 0 0;
+
+    color: var(--ent-slate);
+
+    font-size: 13.5px;
+
+    line-height: 1.65;
+  }
+}
+
+// =========================================================
+// HEADER BUTTON
+// =========================================================
+
+.header-actions-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  flex-shrink: 0;
+}
+
+// =========================================================
+// BUTTONS
+// =========================================================
+
+.btn {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  height: 42px;
+
+  padding: 0 17px;
+
+  border: 1px solid transparent;
+
+  border-radius: $radius-sm;
+
+  font-size: 13.5px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+
+  &:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+}
+
+.btn-primary {
+  background: var(--ent-accent);
+
+  color: #fff;
+
+  border-color: var(--ent-accent);
+
+  &:hover:not(:disabled) {
+    background: var(--ent-accent-ink);
+
+    border-color: var(--ent-accent-ink);
+  }
+}
+
+.btn-secondary {
+  background: var(--ent-surface);
+
+  color: var(--ent-ink);
+
+  border-color: var(--ent-border);
+
+  &:hover:not(:disabled) {
+    color: var(--ent-accent);
+
+    border-color: var(--ent-accent);
+  }
+}
+
+.btn-small {
+  height: 34px;
+
+  padding: 0 14px;
+
+  font-size: 12.5px;
+}
+
+.btn-ghost {
+  height: 34px;
+
+  padding: 0 10px;
+
+  background: transparent;
+
+  color: var(--ent-accent);
+
+  &:hover:not(:disabled) {
+    background: var(--ent-accent-soft);
+  }
+}
+
+// =========================================================
+// FILTER CARD
+// =========================================================
+
+.filters-panel {
+  position: relative;
+
+  width: 100%;
+
+  min-height: 116px;
+
+  padding: 20px 22px;
+
+  overflow: visible;
+}
+
+// =========================================================
+// FILTER LAYOUT
+// =========================================================
+//
+// Desktop:
+//
+// STATION CODE           TIMING       SEARCH    CLEAR
+// ┌──────────────────┐  ┌──────────┐ ┌───────┐ ┌─────┐
+// │ NGP              │  │ 4 hrs ▼  │ │Search │ │Clear│
+// └──────────────────┘  └──────────┘ └───────┘ └─────┘
+//
+// =========================================================
+
+.station-filter-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    150px
+    126px
+    82px;
+
+  align-items: end;
+
+  column-gap: 10px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+// =========================================================
+// FIELD
+// =========================================================
+
+.field {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 7px;
+
+  width: 100%;
+
+  min-width: 0;
+
+  > span {
+    display: block;
+
+    width: 100%;
+
+    margin: 0;
+
+    text-align: left;
+
+    color: var(--ent-slate-soft);
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    line-height: 1.2;
+
+    letter-spacing: 0.05em;
+
+    text-transform: uppercase;
+  }
+
+  input,
+  select {
+    display: block;
+
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    height: 42px;
+
+    margin: 0;
+
+    padding: 0 12px;
+
+    border: 1px solid var(--ent-border);
+
+    border-radius: $radius-sm;
+
+    outline: none;
+
+    background: var(--ent-input-bg);
+
+    color: var(--ent-ink);
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    line-height: normal;
+
+    box-sizing: border-box;
+
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+
+    &::placeholder {
+      color: var(--ent-slate-soft);
+
+      font-weight: 400;
+    }
+
+    &:focus {
+      border-color: var(--ent-accent);
+
+      background: var(--ent-surface);
+
+      box-shadow:
+        0 0 0 3px var(--ent-accent-soft);
+    }
+  }
+
+  select {
+    cursor: pointer;
+  }
+}
+
+// =========================================================
+// STATION AUTOCOMPLETE WRAPPER
+// =========================================================
+
+.station-autocomplete {
+  position: relative;
+
+  width: 100%;
+
+  min-width: 0;
+
+  margin: 0;
+
+  padding: 0;
+
+  /*
+   * IMPORTANT:
+   *
+   * This wrapper must NOT have:
+   * border
+   * background
+   * padding
+   * shadow
+   */
+}
+
+// Actual input
+
+.station-autocomplete input {
+  display: block;
+
+  width: 100%;
+
+  height: 42px;
+
+  min-width: 0;
+
+  max-width: 100%;
+
+  margin: 0;
+
+  padding: 0 12px;
+
+  border: 1px solid var(--ent-border);
+
+  border-radius: $radius-sm;
+
+  outline: none;
+
+  background: var(--ent-input-bg);
+
+  color: var(--ent-ink);
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--ent-accent);
+
+    background: var(--ent-surface);
+
+    box-shadow:
+      0 0 0 3px var(--ent-accent-soft);
+  }
+}
+
+// =========================================================
+// AUTOCOMPLETE DROPDOWN — IMPORTANT FIX
+// =========================================================
+
+.suggestions-dropdown {
+  position: absolute;
+
+  top: calc(100% + 6px);
+
+  left: 0;
+
+  right: auto;
+
+  /*
+   * DO NOT let this become a giant overlay.
+   */
+  width: 100%;
+
+  max-width: 560px;
+
+  max-height: 210px;
+
+  overflow-x: hidden;
+
+  overflow-y: auto;
+
+  z-index: 100;
+
+  margin: 0;
+
+  padding: 5px;
+
+  list-style: none;
+
+  background: var(--ent-surface);
+
+  border: 1px solid var(--ent-border);
+
+  border-radius: 10px;
+
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.12);
+
+  box-sizing: border-box;
+
+  /*
+   * Prevent the dropdown from looking like
+   * a giant second input.
+   */
+
+  li {
+    display: flex;
+
+    align-items: center;
+
+    width: 100%;
+
+    min-height: 34px;
+
+    margin: 0;
+
+    padding: 7px 10px;
+
+    border-radius: 7px;
+
+    background: transparent;
+
+    color: var(--ent-ink);
+
+    font-size: 13px;
+
+    line-height: 1.2;
+
+    cursor: pointer;
+
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
+
+    &:hover {
+      background: var(--ent-accent-soft);
+
+      color: var(--ent-accent);
+    }
+
+    &.no-results {
+      justify-content: center;
+
+      color: var(--ent-slate-soft);
+
+      cursor: default;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
+
+  /*
+   * Station name
+   */
+  .station-name {
+    flex: 1;
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    color: inherit;
+
+    font-size: 13px;
+
+    font-weight: 600;
+  }
+
+  /*
+   * Code badge
+   */
+  .station-code-badge {
+    flex-shrink: 0;
+
+    margin-left: auto;
+
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    background: var(--ent-accent-soft);
+
+    color: var(--ent-accent);
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    line-height: 1;
+
+    letter-spacing: 0.03em;
+  }
+}
+
+// =========================================================
+// ACTION BUTTONS
+// =========================================================
+
+.filter-button-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  height: 42px;
+
+  width: max-content;
+
+  min-width: max-content;
+}
+
+.filter-button-row .btn {
+  height: 42px;
+
+  flex-shrink: 0;
+}
+
+.filter-button-row .btn-primary {
+  min-width: 116px;
+}
+
+.filter-button-row .btn-secondary {
+  min-width: 76px;
+}
+
+// =========================================================
+// SUMMARY
+// =========================================================
+
+.station-summary-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 14px;
+
+  width: 100%;
+}
+
+.summary-card {
+  @extend %card;
+
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 12px;
+
+  min-width: 0;
+
+  min-height: 116px;
+
+  padding: 16px 18px;
+}
+
+.summary-card-icon {
+  display: grid;
+
+  place-items: center;
+
+  width: 38px;
+
+  height: 38px;
+
+  flex-shrink: 0;
+
+  border-radius: $radius-sm;
+
+  background: var(--ent-accent-soft);
+
+  color: var(--ent-accent);
+}
+
+.summary-content {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.summary-label {
+  color: var(--ent-slate-soft);
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.04em;
+
+  text-transform: uppercase;
+}
+
+.summary-value {
+  color: var(--ent-ink);
+
+  font-size: 20px;
+
+  font-weight: 800;
+
+  line-height: 1.25;
+}
+
+.summary-subtitle {
+  margin-top: 3px;
+
+  color: var(--ent-slate-soft);
+
+  font-size: 11.5px;
+}
+
+// =========================================================
+// TABLE SECTION
+// =========================================================
+
+.station-board-table-section {
+  width: 100%;
+
+  padding: 20px 22px;
+
+  overflow: hidden;
+}
+
+.table-topbar {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 14px;
+
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 4px 0 0;
+
+    color: var(--ent-ink);
+
+    font-size: 17px;
+
+    font-weight: 700;
+  }
+}
+
+.section-kicker {
+  display: block;
+
+  color: var(--ent-accent);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.09em;
+
+  text-transform: uppercase;
+}
+
+.table-actions {
+  display: flex;
+
+  align-items: center;
+}
+
+.result-counter {
+  display: inline-flex;
+
+  align-items: center;
+
+  min-height: 30px;
+
+  padding: 6px 11px;
+
+  border-radius: 999px;
+
+  background: var(--ent-app-bg);
+
+  color: var(--ent-slate);
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  white-space: nowrap;
+}
+
+// =========================================================
+// TABLE SCROLL
+// =========================================================
+
+.table-scroll {
+  width: 100%;
+
+  max-width: 100%;
+
+  overflow-x: auto;
+
+  overflow-y: hidden;
+
+  padding: 0;
+
+  margin: 0;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+// =========================================================
+// TABLE
+// =========================================================
+
+.station-board-table {
+  width: 100%;
+
+  /*
+   * Keep every column in a deterministic position.
+   * This is the main fix for the train number and action columns.
+   */
+  min-width: 980px;
+
+  border-collapse: collapse;
+
+  table-layout: fixed;
+
+  font-size: 13.5px;
+
+  thead th {
+    height: 34px;
+
+    padding: 0 12px 10px;
+
+    border-bottom: 1px solid var(--ent-border);
+
+    color: var(--ent-slate-soft);
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+
+    line-height: 1;
+
+    text-align: left;
+
+    text-transform: uppercase;
+
+    vertical-align: middle;
+
+    white-space: nowrap;
+
+    /*
+     * Exact column alignment:
+     * 1 Train
+     * 2 Train number
+     * 3 Departure
+     * 4 Platform
+     * 5 Status
+     * 6 Delay
+     * 7 Destination
+     * 8 Action
+     */
+    &:nth-child(1) {
+      width: 30%;
+    }
+
+    &:nth-child(2) {
+      width: 10%;
+      text-align: center;
+    }
+
+    &:nth-child(3) {
+      width: 10%;
+      text-align: center;
+    }
+
+    &:nth-child(4) {
+      width: 9%;
+      text-align: center;
+    }
+
+    &:nth-child(5) {
+      width: 12%;
+      text-align: center;
+    }
+
+    &:nth-child(6) {
+      width: 8%;
+      text-align: center;
+    }
+
+    &:nth-child(7) {
+      width: 11%;
+      text-align: center;
+    }
+
+    &:nth-child(8) {
+      width: 10%;
+      text-align: center;
+    }
+  }
+
+  tbody td {
+    height: 60px;
+
+    padding: 10px 12px;
+
+    border-bottom: 1px solid var(--ent-border);
+
+    vertical-align: middle;
+
+    box-sizing: border-box;
+
+    overflow: hidden;
+
+    &:nth-child(1) {
+      text-align: left;
+    }
+
+    &:nth-child(2) {
+      text-align: center;
+    }
+
+    &:nth-child(3) {
+      text-align: center;
+    }
+
+    &:nth-child(4) {
+      text-align: center;
+    }
+
+    &:nth-child(5) {
+      text-align: center;
+    }
+
+    &:nth-child(6) {
+      text-align: center;
+    }
+
+    &:nth-child(7) {
+      text-align: center;
+    }
+
+    &:nth-child(8) {
+      text-align: center;
+    }
+  }
+
+  tbody tr {
+    height: 60px;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: var(--ent-app-bg);
+  }
+}
+
+// =========================================================
+// TRAIN
+// =========================================================
+
+.train-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.train-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--ent-ink);
+  color: var(--ent-ink-soft);
+}
+
+.train-name {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ent-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.train-subtitle {
+  display: block;
+  margin-top: 2px;
+  color: var(--ent-slate-soft);
+  font-size: 11.5px;
+}
+
+// =========================================================
+// TRAIN NUMBER
+// =========================================================
+
+.train-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /*
+   * Fixed size keeps every train number
+   * perfectly consistent.
+   */
+  width: 72px;
+  min-width: 72px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0 auto;
+  padding: 0 10px;
+  box-sizing: border-box;
+  /*
+   * IMPORTANT:
+   * Explicitly remove any inherited border.
+   */
+  border: 0;
+  outline: none;
+  border-radius: 999px;
+  /*
+   * Soft enterprise-style blue pill.
+   */
+  background: #eef2ff;
+  color: #315cff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: nowrap;
+  /*
+   * Prevent any inherited shadow.
+   */
+  box-shadow: none;
+  /*
+   * Keeps the number visually centered.
+   */
+  vertical-align: middle;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    background: #e3e9ff;
+    color: #2449e8;
+    transform: translateY(-1px);
+  }
+}
+
+// =========================================================
+// DEPARTURE
+// =========================================================
+
+.departure-cell {
+  color: var(--ent-ink);
+
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+// =========================================================
+// PLATFORM
+// =========================================================
+
+.platform-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 42px;
+
+  height: 28px;
+
+  padding: 0 10px;
+
+  margin: 0 auto;
+
+  border-radius: 999px;
+
+  background: var(--ent-gray-bg);
+
+  color: var(--ent-gray);
+
+  font-size: 11.5px;
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  white-space: nowrap;
+}
+
+// =========================================================
+// STATUS
+// =========================================================
+
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 28px;
+
+  padding: 0 11px;
+
+  margin: 0 auto;
+
+  border-radius: 999px;
+
+  font-size: 11.5px;
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  text-align: center;
+
+  white-space: nowrap;
+
+  &.status-on-time {
+    background: var(--ent-green-bg);
+    color: var(--ent-green);
+  }
+
+  &.status-boarding {
+    background: var(--ent-accent-soft);
+    color: var(--ent-accent);
+  }
+
+  &.status-delayed {
+    background: var(--ent-amber-bg);
+    color: var(--ent-amber);
+  }
+
+  &.status-cancelled {
+    background: var(--ent-red-bg);
+    color: var(--ent-red);
+  }
+
+  &.status-departed {
+    background: var(--ent-gray-bg);
+    color: var(--ent-gray);
+  }
+
+  &.status-arrived {
+    background: var(--ent-purple-bg);
+    color: var(--ent-purple);
+  }
+
+  &.status-upcoming {
+    background: var(--ent-app-bg);
+    color: var(--ent-slate);
+  }
+}
+
+// =========================================================
+// DELAY
+// =========================================================
+
+.delay-cell {
+  color: var(--ent-slate);
+
+  font-weight: 600;
+
+  line-height: 1.2;
+
+  text-align: center;
+
+  white-space: nowrap;
+}
+
+// =========================================================
+// ACTION
+// =========================================================
+
+.col-action {
+  width: 10%;
+
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+
+  text-align: center !important;
+
+  vertical-align: middle !important;
+
+  white-space: nowrap;
+}
+
+.table-action-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 6px;
+
+  width: auto;
+  min-width: 74px;
+
+  height: 34px;
+
+  margin: 0 auto;
+
+  padding: 0 10px;
+
+  box-sizing: border-box;
+
+  color: var(--ent-accent);
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  text-align: center;
+
+  vertical-align: middle;
+
+  white-space: nowrap;
+
+  border-radius: 8px;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--ent-accent-soft);
+    color: var(--ent-accent-ink);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+
+    flex: 0 0 16px;
+
+    pointer-events: none;
+  }
+}
+
+
+// =========================================================
+// TABLE COLUMN ALIGNMENT — HARD GUARANTEE
+// =========================================================
+
+.station-board-table {
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 30%;
+  }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 10%;
+  }
+
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 10%;
+  }
+
+  th:nth-child(4),
+  td:nth-child(4) {
+    width: 9%;
+  }
+
+  th:nth-child(5),
+  td:nth-child(5) {
+    width: 12%;
+  }
+
+  th:nth-child(6),
+  td:nth-child(6) {
+    width: 8%;
+  }
+
+  th:nth-child(7),
+  td:nth-child(7) {
+    width: 11%;
+  }
+
+  th:nth-child(8),
+  td:nth-child(8) {
+    width: 10%;
+  }
+
+  th:nth-child(2),
+  th:nth-child(3),
+  th:nth-child(4),
+  th:nth-child(5),
+  th:nth-child(6),
+  th:nth-child(7),
+  th:nth-child(8),
+  td:nth-child(2),
+  td:nth-child(3),
+  td:nth-child(4),
+  td:nth-child(5),
+  td:nth-child(6),
+  td:nth-child(7),
+  td:nth-child(8) {
+    text-align: center;
+  }
+}
+
+// =========================================================
+// FOOTER
+// =========================================================
+
+.table-footer {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 14px;
+
+  flex-wrap: wrap;
+
+  margin-top: 16px;
+
+  padding-top: 16px;
+
+  border-top: 1px solid var(--ent-border);
+}
+
+.pagination {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+}
+
+.page-number {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 30px;
+
+  height: 30px;
+
+  border-radius: 8px;
+
+  background: var(--ent-app-bg);
+
+  color: var(--ent-ink);
+
+  font-size: 12.5px;
+
+  font-weight: 700;
+}
+
+// =========================================================
+// RESPONSIVE
+// =========================================================
+
+@media (max-width: 1200px) {
+  .station-filter-grid {
+    grid-template-columns:
+      minmax(260px, 1fr)
+      130px
+      116px
+      76px;
+  }
+
+  .station-summary-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .station-filter-grid {
+    grid-template-columns:
+      minmax(220px, 1fr)
+      120px
+      110px
+      72px;
+  }
+
+  .station-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .enterprise-page {
+    gap: 16px;
+
+    padding: 0;
+  }
+
+  .enterprise-header {
+    min-height: auto;
+
+    align-items: flex-start;
+
+    padding: 22px 20px;
+
+    h1 {
+      font-size: 22px;
+    }
+  }
+
+  .header-actions-row {
+    width: 100%;
+
+    justify-content: space-between;
+  }
+
+  // -------------------------------------------------------
+  // MOBILE FILTER
+  // -------------------------------------------------------
+
+  .filters-panel {
+    min-height: auto;
+
+    padding: 16px;
+  }
+
+  .station-filter-grid {
+    grid-template-columns: 1fr;
+
+    width: 100%;
+
+    gap: 12px;
+  }
+
+  .field {
+    width: 100%;
+  }
+
+  .filter-button-row {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    width: 100%;
+
+    height: auto;
+
+    gap: 10px;
+  }
+
+  .filter-button-row .btn {
+    width: 100%;
+  }
+
+  // -------------------------------------------------------
+  // SUMMARY
+  // -------------------------------------------------------
+
+  .station-summary-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  // -------------------------------------------------------
+  // TABLE
+  // -------------------------------------------------------
+
+  .station-board-table-section {
+    padding: 16px;
+  }
+
+  .table-topbar {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .table-footer {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+  .pagination {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .enterprise-header {
+    padding: 20px 16px;
+  }
+
+  .station-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .station-board-table-section {
+    padding: 14px;
+  }
+}
+
+// =========================================================
+// REDUCED MOTION
+// =========================================================
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card,
+  .rotating {
+    animation: none !important;
+  }
+}
