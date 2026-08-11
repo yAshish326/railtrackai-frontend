@@ -8,6 +8,7 @@ import stationsData from "../../data/stations.json";
 import { getSuggestions, normalizeStationLabel, todayIso } from "../../features/train/utils/trainUtils";
 import { ROUTES } from "../../utils/constants";
 import "./LandingPage.scss";
+import landingPageImage from "../../assets/images/Landing-page.png";
 
 const featureCards = [
   {
@@ -251,101 +252,56 @@ export default function LandingPage() {
           </div>
         </section>
 
+      <section className="landing-hero-section">
+
+        {/* LEFT SIDE */}
+        <div className="landing-hero-copy">
+          {/* Keep your existing hero content here */}
+        </div>
+
+
+        {/* RIGHT SIDE */}
         <section className="landing-hero-visual">
-          <div className="hero-visual-card">
-            <div className="hero-visual-top">
+
+          <div className="hero-image-wrapper">
+
+            <img
+              src={landingPageImage}
+              alt="Modern high-speed railway"
+              className="landing-train-image"
+            />
+
+            <div className="hero-image-overlay" />
+
+            <div className="floating-status-card status-card-one">
+              <span className="status-icon">●</span>
               <div>
-                <span>Live rail intelligence</span>
+                <strong>Live Tracking</strong>
+                <small>Railway status</small>
               </div>
-              <span className="visual-badge">RailTrack AI</span>
             </div>
-            <div className="hero-visual-content">
-              <div className="hero-visual-illustration" aria-hidden="true">
-                <svg viewBox="0 0 900 560" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#1f57ff" stopOpacity="0.95" />
-                      <stop offset="100%" stopColor="#3e8cff" stopOpacity="0.95" />
-                    </linearGradient>
-                    <linearGradient id="g2" x1="0" x2="1">
-                      <stop offset="0%" stopColor="#0b2548" stopOpacity="0.7" />
-                      <stop offset="100%" stopColor="#08203a" stopOpacity="0.35" />
-                    </linearGradient>
-                    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="10" stdDeviation="24" floodColor="#071a33" floodOpacity="0.18" />
-                    </filter>
-                  </defs>
 
-                  {/* background rails and subtle gradients */}
-                  <rect x="0" y="0" width="900" height="560" fill="url(#g2)" />
-
-                  {/* distant gradient bands */}
-                  <g opacity="0.08">
-                    <ellipse cx="220" cy="120" rx="200" ry="50" fill="#2e76f1" />
-                    <ellipse cx="680" cy="180" rx="160" ry="40" fill="#1f57ff" />
-                  </g>
-
-                  {/* tracks */}
-                  <g transform="translate(0,260)" stroke="#0b2140" strokeWidth="6">
-                    <path d="M40 40 L860 40" stroke="rgba(255,255,255,0.06)" />
-                    <path d="M40 80 L860 80" stroke="rgba(255,255,255,0.04)" />
-                    <g stroke="#0a1b33" strokeWidth="4">
-                      <path d="M60 20 L60 100" />
-                      <path d="M120 20 L120 100" />
-                      <path d="M180 20 L180 100" />
-                      <path d="M240 20 L240 100" />
-                      <path d="M300 20 L300 100" />
-                      <path d="M360 20 L360 100" />
-                      <path d="M420 20 L420 100" />
-                      <path d="M480 20 L480 100" />
-                      <path d="M540 20 L540 100" />
-                      <path d="M600 20 L600 100" />
-                      <path d="M660 20 L660 100" />
-                      <path d="M720 20 L720 100" />
-                    </g>
-                  </g>
-
-                  {/* train body */}
-                  <g transform="translate(80,200)" filter="url(#softShadow)">
-                    <rect x="90" y="40" rx="18" ry="18" width="560" height="130" fill="url(#g1)" />
-                    <rect x="120" y="20" rx="12" ry="12" width="120" height="40" fill="#0d1c33" opacity="0.12" />
-                    {/* <!-- windows --> */}
-                    <g fill="#ffffff" opacity="0.95">
-                      <rect x="160" y="66" width="54" height="38" rx="6" />
-                      <rect x="235" y="66" width="54" height="38" rx="6" />
-                      <rect x="310" y="66" width="54" height="38" rx="6" />
-                      <rect x="385" y="66" width="54" height="38" rx="6" />
-                      <rect x="460" y="66" width="54" height="38" rx="6" />
-                    </g>
-                    {/* front light */}
-                    <circle cx="640" cy="100" r="10" fill="#ffd466" opacity="0.95" />
-                    {/* wheels */}
-                    <g fill="#081427">
-                      <circle cx="200" cy="190" r="18" />
-                      <circle cx="330" cy="190" r="18" />
-                      <circle cx="460" cy="190" r="18" />
-                      <circle cx="590" cy="190" r="18" />
-                    </g>
-                  </g>
-
-                  {/* small dashboard / cards on the left */}
-                  <g transform="translate(36,56)">
-                    <rect x="0" y="0" width="240" height="120" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.06)" />
-                    <rect x="12" y="14" width="64" height="18" rx="4" fill="#ffffff" opacity="0.9" />
-                    <rect x="12" y="42" width="180" height="14" rx="6" fill="#ffffff" opacity="0.08" />
-                    <rect x="12" y="62" width="110" height="10" rx="5" fill="#ffffff" opacity="0.06" />
-
-                    <rect x="0" y="140" width="180" height="80" rx="12" fill="rgba(255,255,255,0.03)" />
-                    <circle cx="40" cy="180" r="18" fill="#3e8cff" />
-                    <rect x="72" y="160" width="90" height="14" rx="6" fill="#ffffff" opacity="0.9" />
-                  </g>
-
-                </svg>
+            <div className="floating-status-card status-card-two">
+              <span className="status-icon">✦</span>
+              <div>
+                <strong>RailTrack AI</strong>
+                <small>Smart travel assistant</small>
               </div>
-              <div className="hero-visual-overlay" />
             </div>
+
+            <div className="floating-status-card status-card-three">
+              <span className="status-icon">✓</span>
+              <div>
+                <strong>Journey Ready</strong>
+                <small>Plan your trip</small>
+              </div>
+            </div>
+
           </div>
+
         </section>
+
+      </section>
       </main>
 
       <section className="search-preview-section" id="search-preview">

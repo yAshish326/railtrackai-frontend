@@ -218,22 +218,57 @@ export default function DashboardOverview() {
 
   return (
     <div className="dashboard-page">
-      <section className="dashboard-hero-section">
-        <article className="dashboard-card hero-card">
-          <div className="hero-card-inner">
-            <div>
-              <p className="hero-label">{getGreeting()}, {userName} <span aria-hidden="true">👋</span></p>
-              <h1>Hello, {userName}</h1>
-              <p className="hero-copy">Here&apos;s what&apos;s happening with your travel today.</p>
+    <section className="dashboard-hero-section">
+      <article className="dashboard-card hero-card">
+        <div className="hero-card-inner">
+
+          <div className="hero-content">
+            <div className="hero-eyebrow">
+              <span className="hero-status-dot" />
+              {getGreeting()}, {userName}
+              <span className="hero-wave">👋</span>
             </div>
 
-            <div className="hero-date-panel">
-              <span className="hero-date-title">Today</span>
-              <strong className="hero-date-value">{currentDate}</strong>
+            <h1>
+              Where are you 
+
+              <span>travelling next?</span>
+            </h1>
+
+            <p className="hero-copy">
+              Search trains, check your PNR, track live running status,
+              or let RailTrack AI help plan your journey.
+            </p>
+          </div>
+
+          <div className="hero-visual" aria-hidden="true">
+            <div className="hero-glow hero-glow-one" />
+            <div className="hero-glow hero-glow-two" />
+
+            <div className="hero-route">
+              <span className="route-station route-station-start" />
+              <span className="route-line" />
+              <span className="route-station route-station-end" />
+            </div>
+
+            <div className="hero-train">
+              <TrainFront size={54} strokeWidth={1.5} />
+            </div>
+
+            <div className="hero-location hero-location-one">
+              <span>From</span>
+              <strong>Journey</strong>
+            </div>
+
+            <div className="hero-location hero-location-two">
+              <span>To</span>
+              <strong>Your destination</strong>
             </div>
           </div>
-        </article>
-      </section>
+
+        </div>
+      </article>
+    </section>
 
       <section className="dashboard-card stats-card">
         <div className="section-header">

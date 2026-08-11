@@ -595,27 +595,21 @@ export default function AiAssistantPage() {
         </section>
 
         <form className="chat-input-panel" onSubmit={(e) => { e.preventDefault(); void sendMessage(); }}>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void sendMessage();
-              }
-            }}
-            rows={1}
-            placeholder="Ask a question about trains, PNR, station boards, or routes..."
-          />
-          <div className="chat-actions-row">
-            <div className="chat-action-hints">
-              <button type="button" className="btn btn-secondary" disabled title="Voice input is available in a future update">
-                <Mic size={16} /> Voice
-              </button>
-              <span className="muted-copy">Enter to send. Shift + Enter for a new line. Markdown is supported.</span>
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !input.trim()}>
+          <div className="chat-input-row">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  void sendMessage();
+                }
+              }}
+              rows={1}
+              placeholder="Ask a question about trains, PNR, station boards, or routes..."
+            />
+            <button type="submit" className="btn btn-primary send-button" disabled={loading || !input.trim()}>
               <PlayCircle size={16} /> Send
             </button>
           </div>

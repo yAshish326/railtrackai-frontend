@@ -25,7 +25,19 @@ const SearchTrainPage = lazy(() => import("../pages/train/SearchTrainPage"));
 const TrainRoutePage = lazy(() => import("../pages/train/TrainRoutePage"));
 
 function RouteFallback() {
-  return <div className="enterprise-page"><div className="enterprise-card">Loading page...</div></div>;
+  return (
+    <div className="app-loading-page">
+      <div className="app-loading-content">
+        <h1 className="app-loading-title">Railtrack-Ai</h1>
+        <div className="app-loading-subtitle">Loading…</div>
+        <div className="app-loading-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AppRoutes() {
