@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Eraser,
   History as HistoryIcon,
-  Mic,
   PencilLine,
   Pin,
   PinOff,

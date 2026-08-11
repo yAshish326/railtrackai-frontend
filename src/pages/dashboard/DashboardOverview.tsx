@@ -201,12 +201,6 @@ export default function DashboardOverview() {
     { label: "Profile", route: ROUTES.PROFILE, icon: <User size={18} />, color: "#1d4ed8", subtitle: "Manage your profile" },
   ] as const;
   const userName = user?.fullName?.split(/\s+/)[0] ?? "Traveler";
-  const currentDate = new Date().toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
   const handleAiSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!aiPrompt.trim()) {
