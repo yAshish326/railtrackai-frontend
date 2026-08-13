@@ -15,23 +15,25 @@
 }
 
 .settings-card {
-  padding: 24px;
+  padding: 18px;
+  border-radius: 20px;
+  max-width: 500px;
 }
 
 .settings-card__header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .settings-card__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   background: var(--surface-strong);
 }
 
@@ -51,18 +53,18 @@
 
 .settings-card__body {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .settings-card__body--stacked {
-  gap: 14px;
+  gap: 12px;
 }
 
 .settings-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .settings-toggle__meta {

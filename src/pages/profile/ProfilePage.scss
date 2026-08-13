@@ -37,7 +37,7 @@
   min-height: 100%;
   background: linear-gradient(180deg, var(--surface-emphasis) 0%, var(--surface-bg) 100%);
   padding: 28px;
-  border: 1px solid rgba(191, 219, 254, 0.8);
+  border: 1px solid var(--border-color);
 }
 
 .profile-summary-head {
@@ -116,9 +116,9 @@
 }
 
 .profile-summary-stats > div {
-  background: #ffffff;
+  background: var(--surface-strong);
   border-radius: 14px;
-  border: 1px solid #dbeafe;
+  border: 1px solid var(--border-color);
   padding: 14px;
 }
 
@@ -128,13 +128,13 @@
   font-weight: $font-weight-heavy;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #64748b;
+  color: var(--text-sub);
 }
 
 .profile-summary-stats strong {
   display: block;
   margin-top: 8px;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .profile-summary-actions {
@@ -198,10 +198,10 @@
 .profile-field input {
   width: 100%;
   border-radius: 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--control-border);
   padding: 12px 14px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--control-bg);
+  color: var(--text-main);
 }
 
 .profile-details-panel .profile-field-group {

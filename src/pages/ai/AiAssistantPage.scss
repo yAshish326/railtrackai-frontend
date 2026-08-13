@@ -52,10 +52,13 @@ html.dark-mode .ai-shell {
   --ai-muted-light: #cbd5e1;
   --ai-primary: #93c5fd;
   --ai-primary-dark: #7c9bff;
-  --ai-primary-soft: rgba(147, 197, 255, 0.12);
+  --ai-primary-soft: rgba(147, 197, 255, 0.14);
   --ai-success: #4ade80;
   --ai-danger: #f87171;
   --ai-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at top left, rgba(147, 197, 255, 0.12), transparent 18%),
+    radial-gradient(circle at 85% 10%, rgba(125, 95, 255, 0.08), transparent 22%),
+    linear-gradient(180deg, #090b14 0%, #07080f 100%);
 }
 
 html.dark-mode .ai-shell .assistant-limit-card,
@@ -67,7 +70,10 @@ html.dark-mode .ai-shell .chat-message.user,
 html.dark-mode .ai-shell .chat-message.assistant,
 html.dark-mode .ai-shell .chat-input-panel textarea,
 html.dark-mode .ai-shell .suggestion-chip,
-html.dark-mode .ai-shell .chat-messages > .empty-panel.compact {
+html.dark-mode .ai-shell .chat-messages > .empty-panel.compact,
+html.dark-mode .ai-shell .meta-chip,
+html.dark-mode .ai-shell .refresh-chip,
+html.dark-mode .ai-shell .icon-btn {
   background: var(--ai-surface);
   border-color: var(--ai-border);
   color: var(--ai-ink);
@@ -75,28 +81,97 @@ html.dark-mode .ai-shell .chat-messages > .empty-panel.compact {
 
 html.dark-mode .ai-shell .assistant-limit-card {
   background: var(--ai-surface-soft);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+html.dark-mode .ai-shell .conversation-item {
+  background: #111827;
+  border-color: #334155;
+}
+
+html.dark-mode .ai-shell .conversation-item:hover {
+  background: #16203a;
+  border-color: #4f6a95;
 }
 
 html.dark-mode .ai-shell .conversation-item.active {
-  background: var(--ai-surface-soft);
-  box-shadow: inset 3px 0 0 var(--ai-primary);
+  background: #17203c;
+  box-shadow: inset 3px 0 0 rgba(147, 197, 255, 0.75);
+}
+
+html.dark-mode .ai-shell .empty-panel.compact {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: var(--ai-muted-light);
+}
+
+html.dark-mode .ai-shell .suggestion-chip {
+  background: #111827;
+  border-color: #334155;
+  color: #e5e7eb;
+}
+
+html.dark-mode .ai-shell .suggestion-chip:hover,
+html.dark-mode .ai-shell .icon-btn:hover {
+  background: rgba(147, 197, 255, 0.16);
 }
 
 html.dark-mode .ai-shell .chat-message.user {
-  background: #161b2f;
+  background: #111827;
 }
 
 html.dark-mode .ai-shell .chat-message.assistant {
   background: #101424;
 }
 
+html.dark-mode .ai-shell .chat-input-panel {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95));
+  padding-top: 16px;
+}
+
 html.dark-mode .ai-shell .chat-input-panel textarea {
-  background: #0f172a;
+  background: #0c1222;
   color: var(--ai-ink);
+  border-color: #334155;
+}
+
+html.dark-mode .ai-shell .chat-input-panel textarea::placeholder {
+  color: #8b97b3;
+}
+
+html.dark-mode .ai-shell .chat-input-panel textarea:focus {
+  border-color: #93c5fd;
+  background: #0b1225;
+  box-shadow: 0 0 0 3px rgba(147, 197, 255, 0.14);
+}
+
+html.dark-mode .ai-shell .btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #334155;
+  color: #e5e7eb;
+}
+
+html.dark-mode .ai-shell .btn-secondary:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: rgba(147, 197, 255, 0.12);
+}
+
+html.dark-mode .ai-shell .btn-primary {
+  border-color: #93c5fd;
+  background: #5f7dff;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(93, 116, 255, 0.32);
+}
+
+html.dark-mode .ai-shell .btn-primary:hover:not(:disabled) {
+  background: #7a99ff;
+  border-color: #7a99ff;
 }
 
 html.dark-mode .ai-shell .chat-message {
-  border-color: #475569;
+  border-color: #334155;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
 }
 
 html.dark-mode .ai-shell .message-body,
@@ -106,7 +181,7 @@ html.dark-mode .ai-shell .message-body strong {
 }
 
 html.dark-mode .ai-shell .message-body code {
-  background: #1f2937;
+  background: #172135;
   color: #e5e7eb;
 }
 
@@ -115,9 +190,42 @@ html.dark-mode .ai-shell .markdown-table-wrap th {
   color: var(--ai-ink);
 }
 
-html.dark-mode .ai-shell .suggestion-chip:hover,
-html.dark-mode .ai-shell .icon-btn:hover {
-  background: var(--ai-primary-soft);
+html.dark-mode .ai-shell .markdown-table-wrap td {
+  border-color: #334155;
+}
+
+html.dark-mode .ai-shell .chat-input-panel textarea::placeholder {
+  color: #94a3b8;
+}
+
+html.dark-mode .ai-shell .chat-input-panel textarea:focus {
+  border-color: #93c5fd;
+  background: #111827;
+  box-shadow: 0 0 0 3px rgba(147, 197, 255, 0.12);
+}
+
+html.dark-mode .ai-shell .btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #334155;
+  color: #e5e7eb;
+}
+
+html.dark-mode .ai-shell .btn-secondary:hover:not(:disabled) {
+  background: rgba(147, 197, 255, 0.1);
+  border-color: #93c5fd;
+}
+
+html.dark-mode .assistant-snackbar {
+  background: #111827;
+  border-color: #334155;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  color: var(--ai-ink);
+}
+
+html.dark-mode .ai-shell .chat-messages::-webkit-scrollbar-thumb,
+html.dark-mode .ai-shell .conversation-list::-webkit-scrollbar-thumb,
+html.dark-mode .ai-shell .suggestion-strip::-webkit-scrollbar-thumb {
+  background: rgba(147, 197, 255, 0.18);
 }
 
 .ai-shell *,
@@ -1105,6 +1213,10 @@ html.dark-mode .ai-shell .icon-btn:hover {
   border-top: 1px solid var(--ai-border);
 }
 
+.chat-input-row {
+  position: relative;
+}
+
 .chat-input-panel textarea {
   display: block;
 
@@ -1113,7 +1225,7 @@ html.dark-mode .ai-shell .icon-btn:hover {
   min-height: 54px;
   max-height: 180px;
 
-  padding: 13px 15px;
+  padding: 13px 140px 13px 15px;
 
   border: 1px solid #dce3ed;
 
@@ -1150,6 +1262,37 @@ html.dark-mode .ai-shell .icon-btn:hover {
 
   box-shadow:
     0 0 0 3px rgba(49, 92, 255, 0.09);
+}
+
+.send-button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 12px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.send-button:hover,
+.send-button:focus,
+.send-button:active:not(:disabled) {
+  transform: translateY(-50%) !important;
+}
+
+.chat-input-panel .chat-actions-row {
+  justify-content: space-between;
+}
+
+@media (max-width: 760px) {
+  .chat-input-panel textarea {
+    padding: 13px 120px 13px 15px;
+  }
 }
 
 /* =========================================================
@@ -1398,59 +1541,82 @@ html.dark-mode .ai-shell .icon-btn:hover {
    ========================================================= */
 
 @media (max-width: 760px) {
+  html,
+  body {
+    overflow: auto !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
   .ai-assistant-shell,
-  .ai-shell {
+  .ai-shell,
+  .ai-shell.ai-assistant-shell {
     display: flex;
     flex-direction: column;
 
-    height: auto;
-    min-height: auto;
+    width: 100%;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
 
     gap: 14px;
 
     padding: 12px;
   }
 
+  .ai-assistant-shell > .ai-sidebar,
+  .ai-assistant-shell > .ai-chat {
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
   .ai-sidebar {
     flex: 0 0 auto;
 
-    max-height: 420px;
+    max-height: none;
 
-    padding: 15px;
+    padding: 14px;
+
+    border-radius: 20px;
   }
 
   .conversation-section:nth-of-type(2) {
-    min-height: 120px;
+    min-height: auto;
   }
 
   .ai-chat {
-    min-height: 620px;
+    min-height: auto;
 
     padding: 16px;
 
-    gap: 13px;
+    gap: 14px;
   }
 
   .ai-chat h1 {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .ai-chat > .card-title-row {
-    min-height: 45px;
+    min-height: auto;
+    align-items: flex-start;
   }
 
   .suggestion-strip {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 
-    margin-right: -2px;
+    gap: 8px;
+
+    margin-right: 0;
   }
 
   .suggestion-chip {
-    max-width: 300px;
+    max-width: 100%;
   }
 
   .chat-message {
-    width: 94%;
+    width: 100%;
   }
 
   .chat-actions-row {
@@ -1469,6 +1635,40 @@ html.dark-mode .ai-shell .icon-btn:hover {
 
   .chat-actions-row > .btn-primary {
     width: 100%;
+  }
+
+  .chat-input-panel {
+    padding-top: 12px;
+    border-top: 1px solid rgba(51, 65, 85, 0.08);
+  }
+
+  .chat-input-row {
+    position: relative;
+    width: 100%;
+  }
+
+  .chat-input-panel textarea {
+    padding: 14px 100px 14px 16px;
+    min-height: 56px;
+    border-radius: 18px;
+  }
+
+  .send-button {
+    right: 12px;
+    min-height: 44px;
+  }
+
+  .assistant-limit-card {
+    padding: 14px;
+  }
+
+  .assistant-limit-actions {
+    gap: 8px;
+  }
+
+  .meta-chip,
+  .refresh-chip {
+    font-size: 12px;
   }
 }
 
@@ -1489,25 +1689,48 @@ html.dark-mode .ai-shell .icon-btn:hover {
 
   .assistant-limit-card {
     flex-direction: column;
+    gap: 10px;
+    padding: 14px;
   }
 
   .assistant-limit-actions {
-    flex-direction: row;
+    flex-direction: column;
 
-    align-items: center;
+    align-items: stretch;
 
     width: 100%;
   }
 
   .assistant-limit-actions .meta-chip,
   .assistant-limit-actions .refresh-chip {
-    flex: 1;
+    flex: none;
+    width: 100%;
   }
 
   .conversation-item {
     grid-template-columns: minmax(0, 1fr);
 
     gap: 8px;
+  }
+
+  .chat-actions-row {
+    gap: 10px;
+  }
+
+  .chat-input-panel textarea {
+    padding: 14px 90px 14px 16px;
+  }
+
+  .send-button {
+    right: 10px;
+  }
+
+  .suggestion-strip {
+    gap: 6px;
+  }
+
+  .suggestion-chip {
+    max-width: 100%;
   }
 
   .conversation-actions {
@@ -1727,4 +1950,71 @@ body {
 
 .ai-assistant-shell .empty-panel.compact {
   flex-shrink: 0;
+}
+
+/* =========================================================
+   MOBILE OVERRIDES FOR AI ASSISTANT
+   Ensures the mobile layout can scroll and the chat input remains visible.
+   ========================================================= */
+
+@media (max-width: 760px) {
+  html,
+  body {
+    overflow: auto !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .ai-shell.ai-assistant-shell,
+  .ai-assistant-shell,
+  .ai-shell {
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+
+    gap: 14px !important;
+    padding: 12px !important;
+  }
+
+  .ai-assistant-shell > .ai-sidebar,
+  .ai-assistant-shell > .ai-chat,
+  .ai-shell.ai-assistant-shell > .ai-sidebar,
+  .ai-shell.ai-assistant-shell > .ai-chat {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .ai-assistant-shell .ai-chat,
+  .ai-shell.ai-assistant-shell .ai-chat {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .ai-assistant-shell .chat-messages,
+  .ai-shell.ai-assistant-shell .chat-messages {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .ai-assistant-shell .chat-input-panel,
+  .ai-shell.ai-assistant-shell .chat-input-panel {
+    position: relative !important;
+    background: var(--ai-surface) !important;
+  }
+
+  .ai-assistant-shell .chat-input-panel textarea,
+  .ai-shell.ai-assistant-shell .chat-input-panel textarea {
+    background: var(--ai-surface) !important;
+    color: var(--ai-ink) !important;
+  }
 }

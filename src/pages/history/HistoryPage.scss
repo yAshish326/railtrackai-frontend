@@ -385,9 +385,7 @@
 
 .history-item:hover {
   border-color: rgba(37, 99, 235, 0.2);
-
-  background: #fcfdff;
-
+  background: var(--surface-strong);
   box-shadow: 0 7px 20px rgba(15, 23, 42, 0.045);
 }
 

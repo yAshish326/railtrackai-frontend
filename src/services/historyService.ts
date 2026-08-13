@@ -1,3 +1,4 @@
+import api from "./api";
 import { HISTORY_STORAGE_KEY } from "../utils/constants";
 import { getJson, setJson } from "../utils/storage";
 import type { HistoryFilters, HistoryRecord, HistoryType } from "../types/History";
@@ -26,12 +27,12 @@ class HistoryService {
       .sort((left, right) => (sort === "newest" ? right.timestamp.localeCompare(left.timestamp) : left.timestamp.localeCompare(right.timestamp)));
   }
 
-  record<TRequest, TResponse>(
+  async record<TRequest, TResponse>(
     searchType: HistoryType,
     parameters: TRequest,
     response: TResponse,
     responseSummary: string,
-  ): HistoryRecord<TRequest, TResponse> {
+  ): Promise<HistoryRecord<TRequest, TResponse>> {
     const entry: HistoryRecord<TRequest, TResponse> = {
       id: crypto.randomUUID(),
       searchType,
@@ -44,6 +45,21 @@ class HistoryService {
 
     const next = [entry, ...this.getAll()].slice(0, MAX_HISTORY_ITEMS);
     setJson(HISTORY_STORAGE_KEY, next);
+
+    try {
+      await api.post("/history", {
+        id: entry.id,
+        searchType: entry.searchType,
+        parameters: entry.parameters,
+        request: entry.request,
+        response: entry.response,
+        responseSummary: entry.responseSummary,
+        timestamp: entry.timestamp,
+      });
+    } catch (error) {
+      console.warn("Failed to persist history to backend:", error);
+    }
+
     return entry;
   }
 
