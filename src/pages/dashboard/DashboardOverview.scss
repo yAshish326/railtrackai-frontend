@@ -37,13 +37,13 @@
   --dash-shadow: 0 8px 28px rgba(15, 31, 54, 0.055);
   --dash-shadow-hover: 0 14px 36px rgba(15, 31, 54, 0.09);
 
-  --dash-radius: 18px;
+  --dash-radius: 12px;
   --dash-radius-sm: 13px;
-  --dash-gap: 20px;
+  --dash-gap: 10px;
 
   width: 100%;
   min-height: 100%;
-  padding: 22px;
+  padding: 10px;
   color: var(--dash-text);
   background:
     radial-gradient(
@@ -106,7 +106,7 @@
 
 .hero-card-inner {
   position: relative;
-  min-height: 210px;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1650,17 +1650,17 @@ body.dark,
    TABLET
    ============================================================ */
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
 
   .dashboard-page {
 
     .hero-card-inner {
       min-height: 280px;
-      padding: 30px;
+      padding: 25px;
     }
 
     .hero-content {
-      max-width: 62%;
+      max-width: 60%;
     }
 
     .hero-card h1 {
@@ -1690,14 +1690,12 @@ body.dark,
 @media (max-width: 640px) {
 
   .dashboard-page {
+    padding: 14px;
 
     .hero-card-inner {
-      min-height: 390px;
-
+      min-height: 340px;
       display: block;
-
-      padding: 23px 20px;
-
+      padding: 20px 18px;
       background:
         linear-gradient(
           160deg,
@@ -1712,35 +1710,32 @@ body.dark,
     }
 
     .hero-card h1 {
-      max-width: 330px;
-      font-size: 31px;
-      line-height: 1.05;
+      max-width: 100%;
+      font-size: 28px;
+      line-height: 1.12;
     }
 
     .hero-copy {
-      max-width: 350px;
+      max-width: 100%;
       margin-top: 12px;
-      font-size: 13px;
+      font-size: 14px;
+      line-height: 1.65;
     }
 
     .hero-actions {
       position: relative;
       z-index: 10;
-
       display: grid;
-      grid-template-columns: 1fr 1fr;
-
-      gap: 8px;
-
-      max-width: 370px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      max-width: 100%;
+      margin-top: 16px;
     }
 
     .hero-action {
       min-height: 42px;
-
       justify-content: flex-start;
-
-      padding: 7px 9px;
+      padding: 9px 11px;
     }
 
     .hero-action-icon {
@@ -1751,36 +1746,34 @@ body.dark,
 
     .hero-visual {
       position: absolute;
-
       left: 0;
       right: 0;
       bottom: 0;
-
       width: 100%;
-      height: 145px;
+      height: 150px;
+      opacity: 0.95;
     }
 
     .hero-route {
       left: 10%;
       right: 8%;
-      bottom: 58px;
+      bottom: 60px;
     }
 
     .hero-train {
-      left: 17%;
-      bottom: 72px;
-
-      width: 58px;
-      height: 58px;
+      left: 15%;
+      bottom: 70px;
+      width: 56px;
+      height: 56px;
 
       svg {
-        width: 43px;
-        height: 43px;
+        width: 42px;
+        height: 42px;
       }
     }
 
     .hero-location {
-      bottom: 20px;
+      bottom: 18px;
       padding: 6px 9px;
     }
 
@@ -1797,13 +1790,47 @@ body.dark,
     }
 
     .hero-glow-one {
-      right: -80px;
-      top: -100px;
+      right: -70px;
+      top: -90px;
     }
 
     .hero-glow-two {
-      right: 30%;
-      bottom: -160px;
+      right: 28%;
+      bottom: -150px;
+    }
+
+    .dashboard-main-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .action-card,
+    .recent-activity-card,
+    .assistant-card {
+      padding: 18px;
+    }
+
+    .quick-actions-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .activity-row {
+      padding: 12px 12px;
+      gap: 10px;
+    }
+
+    .activity-summary strong,
+    .activity-summary p {
+      font-size: 12px;
+    }
+
+    .activity-time {
+      font-size: 10px;
+    }
+
+    .assistant-content {
+      gap: 14px;
     }
   }
 }

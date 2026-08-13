@@ -82,7 +82,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 920px) {
   .dashboard-container {
     overflow-x: hidden;
   }
@@ -111,5 +111,15 @@
 
   .dashboard-container .dashboard-content {
     padding: 14px 14px 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-container {
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    width: min(280px, 85vw);
   }
 }

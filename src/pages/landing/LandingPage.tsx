@@ -252,19 +252,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-      <section className="landing-hero-section">
-
-        {/* LEFT SIDE */}
-        <div className="landing-hero-copy">
-          {/* Keep your existing hero content here */}
-        </div>
-
-
-        {/* RIGHT SIDE */}
         <section className="landing-hero-visual">
-
           <div className="hero-image-wrapper">
-
             <img
               src={landingPageImage}
               alt="Modern high-speed railway"
@@ -296,12 +285,8 @@ export default function LandingPage() {
                 <small>Plan your trip</small>
               </div>
             </div>
-
           </div>
-
         </section>
-
-      </section>
       </main>
 
       <section className="search-preview-section" id="search-preview">

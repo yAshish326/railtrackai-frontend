@@ -225,9 +225,8 @@ export default function DashboardOverview() {
 
             <h1>
               Where are you 
-
-              <span>travelling next?</span>
             </h1>
+            <span>travelling next?</span>
 
             <p className="hero-copy">
               Search trains, check your PNR, track live running status,
