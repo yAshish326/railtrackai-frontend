@@ -6,6 +6,8 @@ import type { HistoryFilters, HistoryRecord, HistoryType } from "../types/Histor
 const MAX_HISTORY_ITEMS = 250;
 
 class HistoryService {
+  private inFlightPosts = new Set<string>();
+
   getAll(): HistoryRecord[] {
     return getJson<HistoryRecord[]>(HISTORY_STORAGE_KEY, []);
   }
@@ -43,21 +45,56 @@ class HistoryService {
       timestamp: new Date().toISOString(),
     };
 
+    // Always persist locally first for instant UX
     const next = [entry, ...this.getAll()].slice(0, MAX_HISTORY_ITEMS);
     setJson(HISTORY_STORAGE_KEY, next);
 
+    // Attempt to persist to backend (non-blocking). Deduplicate in-flight posts.
     try {
-      await api.post("/history", {
-        id: entry.id,
-        searchType: entry.searchType,
-        parameters: entry.parameters,
-        request: entry.request,
-        response: entry.response,
-        responseSummary: entry.responseSummary,
-        timestamp: entry.timestamp,
-      });
-    } catch (error) {
-      console.warn("Failed to persist history to backend:", error);
+      const postKey = `${entry.searchType}:${JSON.stringify(entry.parameters)}`;
+      if (this.inFlightPosts.has(postKey)) return entry;
+      this.inFlightPosts.add(postKey);
+
+      let endpoint: string | null = null;
+      switch (entry.searchType) {
+        case "AI":
+          endpoint = "/ai/history";
+          break;
+        case "PNR":
+          endpoint = "/pnr/history";
+          break;
+        case "TRAIN":
+        case "LIVE":
+        case "ROUTE":
+          endpoint = "/trains/history";
+          break;
+        default:
+          endpoint = null;
+      }
+
+      if (endpoint) {
+        void api.post(endpoint, {
+          id: entry.id,
+          searchType: entry.searchType,
+          parameters: entry.parameters,
+          request: entry.request,
+          response: entry.response,
+          responseSummary: entry.responseSummary,
+          timestamp: entry.timestamp,
+        }).catch((err) => {
+          // log but don't revert local write
+          // eslint-disable-next-line no-console
+          console.warn("Failed to POST history to backend:", err);
+        }).finally(() => {
+          try { this.inFlightPosts.delete(postKey); } catch {}
+        });
+      } else {
+        // No endpoint mapped; remove key
+        this.inFlightPosts.delete(postKey);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("History post scheduling failed:", err);
     }
 
     return entry;

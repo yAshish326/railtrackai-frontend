@@ -33,6 +33,12 @@ const PAGE_SIZE = 6;
 
 type SortKey = "departure" | "arrival" | "duration" | "trainNumber";
 
+type AiInsight = {
+  insightMessage: string;
+  fastestTrain?: { number: string };
+  longestTrain?: { number: string };
+};
+
 function useAnchoredPosition(anchorRef: React.RefObject<HTMLElement | null>, open: boolean) {
   const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -149,6 +155,13 @@ export default function SearchTrainPage() {
   const [queryFilter] = useState("");
   const [page, setPage] = useState(1);
 
+  // AI insight state
+  const aiCacheRef = useRef<Record<string, AiInsight>>({});
+  const [aiInsight, setAiInsight] = useState<AiInsight | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRecommendedOnly, setAiRecommendedOnly] = useState(false);
+
   const fromRef = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
   const fromSuggestionsRef = useRef<HTMLUListElement>(null);
@@ -160,118 +173,18 @@ export default function SearchTrainPage() {
   function openDatePicker(ref: React.RefObject<HTMLInputElement | null> = dateInputRef) {
     const el = ref.current;
     if (!el) return;
-    if (typeof (el as HTMLInputElement & { showPicker?: () => void }).showPicker === "function") {
-      el.showPicker();
+    const pickerEl = el as HTMLInputElement & { showPicker?: () => void };
+    if (typeof pickerEl.showPicker === "function") {
+      pickerEl.showPicker();
     } else {
       el.focus();
+      el.click();
     }
   }
 
-  const handleDateFieldClick = () => openDatePicker();
-
-  const [aiInsight, setAiInsight] = useState<
-    | {
-        insightMessage?: string;
-        fastestTrain?: { number?: string | number };
-        longestTrain?: { number?: string | number };
-      }
-    | null
-  >(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiRecommendedOnly, setAiRecommendedOnly] = useState(false);
-
-  const aiCacheRef = useRef<Record<string, NonNullable<typeof aiInsight>>>({});
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node | null;
-      if (
-        fromRef.current &&
-        target &&
-        !fromRef.current.contains(target) &&
-        !fromSuggestionsRef.current?.contains(target)
-      ) {
-        setShowFromSuggestions(false);
-      }
-      if (
-        toRef.current &&
-        target &&
-        !toRef.current.contains(target) &&
-        !toSuggestionsRef.current?.contains(target)
-      ) {
-        setShowToSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const normalizeAiInsight = useCallback((response: unknown) => {
-    if (!response) return null;
-    if (typeof response === "string") {
-      return { insightMessage: response };
-    }
-
-    if (typeof response === "object" && response !== null) {
-      const raw = response as Record<string, unknown>;
-      const data = (raw.data && typeof raw.data === "object" ? (raw.data as Record<string, unknown>) : raw) as Record<string, unknown>;
-
-      const extractString = (...keys: string[]) => {
-        for (const key of keys) {
-          const value = data[key];
-          if (typeof value === "string" && value.trim()) return value.trim();
-          if (typeof value === "object" && value !== null) {
-            const nested = value as Record<string, unknown>;
-            if (typeof nested.text === "string" && nested.text.trim()) return nested.text.trim();
-            if (typeof nested.message === "string" && nested.message.trim()) return nested.message.trim();
-          }
-        }
-        return undefined;
-      };
-
-      const normalizeTrainReference = (value: unknown) => {
-        if (!value || typeof value !== "object") return undefined;
-        const train = value as Record<string, unknown>;
-        const number =
-          typeof train.number === "string" || typeof train.number === "number"
-            ? train.number
-            : typeof train.trainNumber === "string" || typeof train.trainNumber === "number"
-            ? train.trainNumber
-            : typeof train.id === "string" || typeof train.id === "number"
-            ? train.id
-            : undefined;
-        return number !== undefined ? { number } : undefined;
-      };
-
-      return {
-        insightMessage:
-          extractString(
-            "insightMessage",
-            "message",
-            "response",
-            "text",
-            "summary",
-            "prediction",
-            "analysis",
-            "description",
-            "recommendation",
-          ),
-        fastestTrain:
-          normalizeTrainReference(data.fastestTrain) ||
-          normalizeTrainReference(data.fastest) ||
-          normalizeTrainReference(data.quickestTrain) ||
-          normalizeTrainReference(data.bestTrain),
-        longestTrain:
-          normalizeTrainReference(data.longestTrain) ||
-          normalizeTrainReference(data.overnightTrain) ||
-          normalizeTrainReference(data.bestOvernightTrain) ||
-          normalizeTrainReference(data.slowestTrain),
-      };
-    }
-
-    return null;
-  }, []);
+  function handleDateFieldClick() {
+    openDatePicker(dateInputRef);
+  }
 
   const buildSearchKey = useCallback((from: string, to: string, date: string) => `${from}|${to}|${date}`, []);
 
@@ -284,6 +197,20 @@ export default function SearchTrainPage() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount);
+  }, []);
+
+  const normalizeAiInsight = useCallback((data: unknown): AiInsight | null => {
+    if (!data || typeof data !== "object") return null;
+    const raw = data as Record<string, unknown>;
+
+    const fastest = raw.fastestTrain as Record<string, unknown> | undefined;
+    const longest = raw.longestTrain as Record<string, unknown> | undefined;
+
+    return {
+      insightMessage: typeof raw.insightMessage === "string" ? raw.insightMessage : "",
+      fastestTrain: fastest?.number != null ? { number: String(fastest.number) } : undefined,
+      longestTrain: longest?.number != null ? { number: String(longest.number) } : undefined,
+    };
   }, []);
 
   // NOTE: previously this also pushed aiInsight.insightMessage as a third
@@ -513,10 +440,10 @@ export default function SearchTrainPage() {
         setAiInsight(aiCacheRef.current[initialSearchKey]);
         setAiLoading(false);
       } else {
-        const cachedAI = cacheService.get<
-          { searchKey: string },
-          NonNullable<typeof aiInsight>
-        >("AI", { searchKey: initialSearchKey });
+        const cachedAI = cacheService.get<{ searchKey: string }, AiInsight>(
+          "AI",
+          { searchKey: initialSearchKey }
+        );
 
         if (cachedAI?.response) {
           aiCacheRef.current[initialSearchKey] = cachedAI.response;
@@ -619,7 +546,25 @@ export default function SearchTrainPage() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [routeData, setRouteData] = useState<TrainRouteResponse | null>(null);
 
-  const haltedStations = routeData ? routeData.stations.filter((s) => (s.haltMinutes ?? 0) > 0) : [];
+  // Always keep origin (first) and destination (last) stations, in addition
+  // to any intermediate station that has a halt.
+  const haltedStations = routeData
+    ? routeData.stations.filter(
+        (station, index) =>
+          (station.haltMinutes ?? 0) > 0 ||
+          index === 0 ||
+          index === routeData.stations.length - 1
+      )
+    : [];
+
+  useEffect(() => {
+    if (routeModalOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [routeModalOpen]);
 
   async function openRouteModal(trainNumber: string) {
     setRouteError(null);
@@ -642,6 +587,117 @@ export default function SearchTrainPage() {
     setRouteError(null);
     setRouteLoading(false);
   }
+
+  // Render route modal into document.body to escape stacking contexts
+  // and ensure it appears above the fixed sidebar.
+  const routeModalPortal =
+    routeModalOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div className="route-modal-overlay" role="dialog" aria-modal="true">
+            <div className="route-modal">
+              <div className="route-modal-header">
+                <div>
+                  <span className="modal-eyebrow">TRAIN ROUTE</span>
+                  <h3>
+                    {routeData ? `${routeData.trainName} (${routeData.trainNumber})` : "Train Route"}
+                  </h3>
+                </div>
+
+                <button className="close-route-button" onClick={closeRouteModal} aria-label="Close route modal">
+                  ×
+                </button>
+              </div>
+
+              <div className="route-modal-body">
+                {routeLoading && (
+                  <div className="route-loading">
+                    <span className="search-spinner" />
+                    Loading train route...
+                  </div>
+                )}
+
+                {routeError && (
+                  <div className="search-error">
+                    <AlertTriangle size={16} />
+                    {routeError}
+                  </div>
+                )}
+
+                {routeData && (
+                  <div className="route-content">
+                    <div className="route-summary-grid">
+                      <div className="route-summary-item">
+                        <span>Distance</span>
+                        <strong>{routeData.distance} km</strong>
+                      </div>
+
+                      <div className="route-summary-item">
+                        <span>Running Days</span>
+                        <strong>{routeData.runningDays.join(", ")}</strong>
+                      </div>
+                    </div>
+
+                    {haltedStations.length === 0 ? (
+                      <div className="route-empty">No halting stations on this route.</div>
+                    ) : (
+                      <div className="route-station-list">
+                        {haltedStations.map((station) => {
+                          const isOrigin = routeData
+                            ? station.sequence === routeData.stations[0].sequence
+                            : false;
+                          const isDestination = routeData
+                            ? station.sequence === routeData.stations[routeData.stations.length - 1].sequence
+                            : false;
+
+                          return (
+                            <div key={`${station.sequence}-${station.stationCode}`} className="route-station">
+                              <div className="route-sequence">{station.sequence}</div>
+
+                              <div className="route-station-info">
+                                <div className="route-station-name">
+                                  {station.stationName}
+                                  <span>{station.stationCode}</span>
+                                </div>
+
+                                <div className="route-station-times">
+                                  Arr: {station.arrival}
+                                  <span>•</span>
+                                  Dep: {station.departure}
+                                  <span>•</span>
+                                  Day: {station.dayNumber}
+                                  <span>•</span>
+                                  {isOrigin
+                                    ? "Origin"
+                                    : isDestination
+                                    ? "Destination"
+                                    : `Halt: ${station.haltMinutes}m`}
+                                </div>
+                              </div>
+
+                              {station.latitude != null && station.longitude != null && (
+                                
+                                  <a
+                                    href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="route-map-button"
+                                  >
+                                    Map ↗
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
 return (
   <div className="search-train-page">
@@ -788,8 +844,7 @@ return (
         >
           <ArrowLeftRight size={18} />
         </button>
-
-
+        
         {/* TO */}
 
         <div
@@ -930,150 +985,7 @@ return (
     )}
 
 
-    {/* =====================================================
-        ROUTE MODAL
-    ====================================================== */}
-
-    {routeModalOpen && (
-      <div
-        className="route-modal-overlay"
-        role="dialog"
-        aria-modal="true"
-      >
-
-        <div className="route-modal">
-
-          <div className="route-modal-header">
-
-            <div>
-              <span className="modal-eyebrow">
-                TRAIN ROUTE
-              </span>
-
-              <h3>
-                {routeData
-                  ? `${routeData.trainName} (${routeData.trainNumber})`
-                  : "Train Route"}
-              </h3>
-            </div>
-
-            <button
-              className="close-route-button"
-              onClick={closeRouteModal}
-              aria-label="Close route modal"
-            >
-              ×
-            </button>
-
-          </div>
-
-
-          <div className="route-modal-body">
-
-            {routeLoading && (
-              <div className="route-loading">
-                <span className="search-spinner" />
-                Loading train route...
-              </div>
-            )}
-
-            {routeError && (
-              <div className="search-error">
-                <AlertTriangle size={16} />
-                {routeError}
-              </div>
-            )}
-
-            {routeData && (
-              <div className="route-content">
-
-                <div className="route-summary-grid">
-
-                  <div className="route-summary-item">
-                    <span>Distance</span>
-                    <strong>
-                      {routeData.distance} km
-                    </strong>
-                  </div>
-
-                  <div className="route-summary-item">
-                    <span>Running Days</span>
-                    <strong>
-                      {routeData.runningDays.join(", ")}
-                    </strong>
-                  </div>
-
-                </div>
-
-
-                {haltedStations.length === 0 ? (
-                  <div className="route-empty">
-                    No halting stations on this route.
-                  </div>
-                ) : (
-                  <div className="route-station-list">
-
-                    {haltedStations.map((station) => (
-
-                      <div
-                        key={`${station.sequence}-${station.stationCode}`}
-                        className="route-station"
-                      >
-
-                        <div className="route-sequence">
-                          {station.sequence}
-                        </div>
-
-                        <div className="route-station-info">
-
-                          <div className="route-station-name">
-                            {station.stationName}
-
-                            <span>
-                              {station.stationCode}
-                            </span>
-                          </div>
-
-                          <div className="route-station-times">
-                            Arr: {station.arrival}
-                            <span>•</span>
-                            Dep: {station.departure}
-                            <span>•</span>
-                            Day: {station.dayNumber}
-                            <span>•</span>
-                            Halt: {station.haltMinutes}m
-                          </div>
-
-                        </div>
-
-                        {station.latitude != null &&
-                          station.longitude != null && (
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="route-map-button"
-                            >
-                              Map ↗
-                            </a>
-                        )}
-
-                      </div>
-
-                    ))}
-
-                  </div>
-                )}
-
-              </div>
-            )}
-
-          </div>
-
-        </div>
-
-      </div>
-    )}
+    {routeModalPortal}
 
 
     {/* =====================================================

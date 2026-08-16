@@ -290,7 +290,8 @@
 
   color: var(--lp-text);
 
-  font-size: clamp(42px, 5vw, 72px);
+  /* Slightly smaller headline for better balance on mid/large screens */
+  font-size: clamp(36px, 4.2vw, 56px);
   line-height: 0.98;
   font-weight: 850;
 
@@ -2878,5 +2879,22 @@ body.dark,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Narrow the right visual slightly for mid-large screens (e.g. 1200px wide)
+   so the hero copy and controls have more breathing room and nothing overlaps. */
+@media (min-width: 1151px) and (max-width: 1300px) {
+  .landing-hero-section {
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 760px);
+  }
+
+  .hero-image-wrapper {
+    max-width: 760px;
+    height: 480px;
+  }
+
+  .landing-train-image {
+    object-position: center right;
   }
 }

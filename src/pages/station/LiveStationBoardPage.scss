@@ -451,6 +451,159 @@ $radius-lg: 18px;
     font-weight: 700;
   }
 }
+// =========================================================
+// JOURNEY TIMELINE — compact, responsive origin → current → destination
+// =========================================================
+
+.live-journey-timeline {
+  padding: 28px 4px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ljt-track {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  min-width: max-content;
+  gap: 0;
+
+  // When the stop count is small, stretch evenly to fill the card instead
+  // of clumping on the left.
+  &:not(.dense) {
+    min-width: 100%;
+  }
+}
+
+.ljt-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 84px;
+  flex-shrink: 0;
+
+  &:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 100%;
+    height: 3px;
+    background: var(--ent-border);
+    z-index: 0;
+  }
+
+  &.past:not(:last-child)::after,
+  &.origin:not(:last-child)::after {
+    background: var(--ent-accent);
+  }
+
+  // compact = intermediate, non-halted stop on a long route: just a dot
+  &.compact {
+    flex: 0 0 22px;
+    min-width: 22px;
+    cursor: default;
+  }
+}
+
+.ljt-dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ent-accent);
+  border: 2px solid var(--ent-surface);
+  box-shadow: 0 0 0 1px var(--ent-border);
+}
+
+.ljt-stop.compact .ljt-dot {
+  width: 7px;
+  height: 7px;
+  border-width: 1px;
+  opacity: 0.75;
+}
+
+.ljt-stop.origin .ljt-dot {
+  background: var(--ent-green);
+  box-shadow: 0 0 0 1px var(--ent-green);
+}
+
+.ljt-stop.destination .ljt-dot {
+  background: var(--ent-red);
+  box-shadow: 0 0 0 1px var(--ent-red);
+}
+
+.ljt-stop.past .ljt-dot {
+  background: var(--ent-accent);
+}
+
+.ljt-stop.current .ljt-dot {
+  width: 14px;
+  height: 14px;
+  background: var(--ent-accent);
+  box-shadow: 0 0 0 4px var(--ent-accent-soft);
+}
+
+.ljt-label {
+  margin-top: 10px;
+  text-align: center;
+  padding: 0 6px;
+  max-width: 120px;
+
+  strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ent-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--ent-slate-soft);
+    white-space: nowrap;
+  }
+}
+
+.ljt-current-badge {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ent-accent-soft);
+  color: var(--ent-accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 2;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .ljt-stop { min-width: 64px; }
+  .ljt-label { max-width: 84px; }
+  .ljt-stop.compact { flex-basis: 16px; min-width: 16px; }
+}
+
+@media (max-width: 480px) {
+  .ljt-current-badge span { display: none; } // icon only on very small screens
+  .ljt-label strong { font-size: 11px; }
+}
 
 .hero-detail-row {
   display: grid;
