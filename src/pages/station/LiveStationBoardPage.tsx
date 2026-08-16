@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap, Marker } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { AlertTriangle, MapPinned, Search } from "lucide-react";
+import { AlertTriangle, MapPinned, Search, TrainFront } from "lucide-react";
 
 import trainService from "../../services/trainService";
 import { cacheService } from "../../services/cacheService";
@@ -22,6 +23,32 @@ interface LiveStationPoint {
   latitude?: number;
   longitude?: number;
 }
+
+// Superset used for both the map fallback AND the journey timeline —
+// carries halt info + times, sourced from the full route (same data the
+// route modal / route page use), not just coordinates.
+type StationPoint = {
+  lat: number;
+  lng: number;
+  code?: string;
+  name?: string;
+  haltMinutes?: number | null;
+  arrival?: string;
+  departure?: string;
+};
+
+type TimelineStop = {
+  code?: string;
+  name: string;
+  time?: string;
+  isOrigin: boolean;
+  isDestination: boolean;
+  isCurrent: boolean;
+  isPast: boolean;
+  isCompact: boolean; // rendered as a small unlabeled dot
+};
+
+const COMPACT_THRESHOLD = 6; // beyond this many stops, non-essential stops shrink to plain dots
 
 interface LiveTrainSnapshot {
   trainNumber?: string;
@@ -72,6 +99,19 @@ export default function LiveStationBoardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LiveTrainSnapshot | null>(cached?.response ?? null);
+  // Full route stations (with halt info + times), used for the map coordinate
+  // fallback AND as the source of truth for the compact journey timeline.
+  const [routeFallbackStations, setRouteFallbackStations] = useState<StationPoint[]>([]);
+
+  const parseCoord = useCallback((value: unknown) => {
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  }, []);
+
   const handleSearch = useCallback(async (number?: string, date?: string) => {
     const finalNumber = (number ?? trainNumber).trim().toUpperCase();
     const finalDate = (date ?? journeyDate).trim();
@@ -92,7 +132,57 @@ export default function LiveStationBoardPage() {
       const payload = response.data as LiveTrainSnapshot;
       setData(payload);
 
+      // Always resolve the full route (halt minutes + arrival/departure) so the
+      // compact timeline can apply the same "halted stations" logic as the
+      // route modal/page. Reuse the ROUTE cache first — this is the same
+      // cache bucket TrainRoutePage writes to, so we often avoid a fresh
+      // RailRadar call entirely.
       const settings = settingsService.getSettings();
+      try {
+        let stations: any[] = [];
+
+        if (settings.cache.enabled) {
+          const cachedRoute = cacheService.get<{ trainNumber: string }, { stations?: any[] }>("ROUTE", {
+            trainNumber: finalNumber,
+          });
+          if (cachedRoute?.response?.stations?.length) {
+            stations = cachedRoute.response.stations;
+          }
+        }
+
+        if (stations.length === 0) {
+          const routeResp = await trainService.getRouteDetails(finalNumber);
+          stations = routeResp.data?.stations ?? [];
+          if (settings.cache.enabled && routeResp.data) {
+            cacheService.set("ROUTE", { trainNumber: finalNumber }, routeResp.data, settings.cache.ttlMinutes * 60 * 1000);
+          }
+        }
+
+        const mapped: StationPoint[] = stations
+          .map((s) => {
+            const lat = parseCoord((s as any).latitude);
+            const lng = parseCoord((s as any).longitude);
+            const halt = parseCoord((s as any).haltMinutes ?? (s as any).halt ?? (s as any).halt_min);
+            if (lat === undefined || lng === undefined) return null;
+            return {
+              lat,
+              lng,
+              code: (s as any).stationCode,
+              name: (s as any).stationName,
+              haltMinutes: halt ?? null,
+              arrival: (s as any).arrival,
+              departure: (s as any).departure,
+            } as StationPoint;
+          })
+          .filter((s): s is StationPoint => s !== null);
+
+        if (mapped.length > 0) setRouteFallbackStations(mapped);
+      } catch (err) {
+        // route fetch is optional context — don't block the live status view
+        // eslint-disable-next-line no-console
+        console.debug("Route fallback failed:", err);
+      }
+
       if (settings.cache.enabled) {
         cacheService.set("LIVE", { trainNumber: finalNumber, date: finalDate }, payload, settings.cache.ttlMinutes * 60 * 1000);
       }
@@ -124,17 +214,8 @@ export default function LiveStationBoardPage() {
     await handleSearch();
   }
 
-  const parseCoord = useCallback((value: unknown) => {
-    if (typeof value === "number") return value;
-    if (typeof value === "string" && value.trim() !== "") {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : undefined;
-    }
-    return undefined;
-  }, []);
-
   const routePoints = useMemo(() => {
-    return (
+    const fromLive = (
       data?.routeCoordinates
         ?.map((point) => {
           const lat = parseCoord(point.latitude);
@@ -143,7 +224,9 @@ export default function LiveStationBoardPage() {
         })
         .filter((point): point is [number, number] => typeof point !== "undefined") ?? []
     );
-  }, [data, parseCoord]);
+    if (fromLive.length > 0) return fromLive;
+    return routeFallbackStations.map((s) => [s.lat, s.lng] as [number, number]);
+  }, [data, parseCoord, routeFallbackStations]);
 
   const currentLocationPoint = useMemo<[number, number] | null>(() => {
     const lat = parseCoord(data?.latitude);
@@ -153,8 +236,6 @@ export default function LiveStationBoardPage() {
 
   const mapPoints = currentLocationPoint ? [currentLocationPoint] : routePoints;
   const mapCenter = mapPoints[0] ?? [20.5937, 78.9629];
-  const routeStartPoint = routePoints[0] ?? null;
-  const routeEndPoint = routePoints.length > 1 ? routePoints[routePoints.length - 1] : null;
 
   const delayLabel = typeof data?.delayMinutes === "number"
     ? `${data.delayMinutes} min late`
@@ -169,6 +250,88 @@ export default function LiveStationBoardPage() {
   const statusText = delayLabel
     ? `${runningStatusLabel} • ${delayLabel}`
     : runningStatusLabel;
+
+  const originLabel = (() => {
+    if (routeFallbackStations.length > 0) return routeFallbackStations[0].name ?? routeFallbackStations[0].code ?? "Unknown";
+    if (data?.timeline && data.timeline.length > 0) {
+      const first = data.timeline[0];
+      return (first.name ?? (first as any).stationName ?? first.code) ?? "Unknown";
+    }
+    if (data?.routeCoordinates && data.routeCoordinates.length > 0) return data.routeCoordinates[0].name ?? data.routeCoordinates[0].code ?? "Unknown";
+    return "Unknown";
+  })();
+
+  const destinationLabel = (() => {
+    if (routeFallbackStations.length > 0) return routeFallbackStations[routeFallbackStations.length - 1].name ?? routeFallbackStations[routeFallbackStations.length - 1].code ?? "Unknown";
+    if (data?.timeline && data.timeline.length > 0) {
+      const last = data.timeline[data.timeline.length - 1];
+      return (last.name ?? (last as any).stationName ?? last.code) ?? "Unknown";
+    }
+    if (data?.routeCoordinates && data.routeCoordinates.length > 0) return data.routeCoordinates[data.routeCoordinates.length - 1].name ?? data.routeCoordinates[data.routeCoordinates.length - 1].code ?? "Unknown";
+    return "Unknown";
+  })();
+
+  // Compact journey timeline: origin -> halted stations -> current -> destination.
+  // Same filtering rule as the route modal (haltMinutes > 0, plus origin/destination),
+  // with the current station forced in even if it isn't a halt point. Anything past
+  // COMPACT_THRESHOLD collapses non-essential stops into small unlabeled dots.
+  const journeyTimeline = useMemo<TimelineStop[]>(() => {
+    // Prefer the full route (has haltMinutes) — fall back to whatever the live
+    // payload provided if the route fetch didn't come back.
+    const source: Array<LiveStationPoint & { haltMinutes?: number | null }> =
+      routeFallbackStations.length > 0
+        ? routeFallbackStations.map((s) => ({ code: s.code, name: s.name, arrival: s.arrival, departure: s.departure, haltMinutes: s.haltMinutes }))
+        : data?.timeline && data.timeline.length > 0
+        ? data.timeline
+        : data?.upcomingStations && data.upcomingStations.length > 0
+        ? data.upcomingStations
+        : data?.routeCoordinates ?? [];
+
+    if (!source || source.length === 0) return [];
+
+    const currentLabel = (data?.currentStation ?? data?.currentLocation ?? "").toLowerCase().trim();
+
+    let currentIdx = currentLabel
+      ? source.findIndex((s) => {
+          const name = (s.name ?? (s as any).stationName ?? "").toLowerCase();
+          const code = (s.code ?? (s as any).stationCode ?? "").toLowerCase();
+          return name === currentLabel || code === currentLabel;
+        })
+      : -1;
+
+    if (currentIdx === -1 && currentLabel) {
+      currentIdx = source.findIndex((s) => {
+        const name = (s.name ?? (s as any).stationName ?? "").toLowerCase();
+        return Boolean(name) && (currentLabel.includes(name) || name.includes(currentLabel));
+      });
+    }
+
+    const lastIdx = source.length - 1;
+
+    // Same rule as the route modal: keep origin, destination, halted stations —
+    // plus always keep the current station even if it has no halt.
+    const kept = source
+      .map((s, idx) => ({ s, idx }))
+      .filter(({ s, idx }) => (s.haltMinutes ?? 0) > 0 || idx === 0 || idx === lastIdx || idx === currentIdx);
+
+    const total = kept.length;
+
+    return kept.map(({ s, idx }) => {
+      const isOrigin = idx === 0;
+      const isDestination = idx === lastIdx;
+      const isCurrent = idx === currentIdx;
+      return {
+        code: s.code ?? (s as any).stationCode,
+        name: (s.name ?? (s as any).stationName ?? s.code ?? "Station") as string,
+        time: s.departure || s.arrival,
+        isOrigin,
+        isDestination,
+        isCurrent,
+        isPast: currentIdx >= 0 ? idx < currentIdx : false,
+        isCompact: total > COMPACT_THRESHOLD && !isOrigin && !isDestination && !isCurrent,
+      };
+    });
+  }, [data, routeFallbackStations]);
 
   return (
     <div className="enterprise-page live-status-page">
@@ -235,14 +398,14 @@ export default function LiveStationBoardPage() {
             <div className="live-hero-body">
               <div className="hero-panel-row hero-stat-row">
                 <div>
-                  <span className="hero-section-label">Departure</span>
-                  <strong>{data.expectedArrival ?? "—"}</strong>
-                  <p>{data.previousStation ? `From ${data.previousStation}` : "Departure station"}</p>
+                  <span className="hero-section-label">From</span>
+                  <strong>{originLabel}</strong>
+                  <p>Origin station</p>
                 </div>
                 <div>
-                  <span className="hero-section-label">Arrival</span>
-                  <strong>{data.actualArrival ?? "—"}</strong>
-                  <p>{data.currentStation ? `At ${data.currentStation}` : "Current station"}</p>
+                  <span className="hero-section-label">To</span>
+                  <strong>{destinationLabel}</strong>
+                  <p>Destination station</p>
                 </div>
                 <div>
                   <span className="hero-section-label">Next stop</span>
@@ -256,55 +419,65 @@ export default function LiveStationBoardPage() {
                 <p className="hero-status-caption">{statusText}</p>
               </div>
 
-              <div className="live-summary-grid">
-                <div className="live-summary-card">
-                  <span>Current location</span>
-                  <strong>{currentLocationLabel}</strong>
-                </div>
-                <div className="live-summary-card">
-                  <span>Previous stop</span>
-                  <strong>{previousStopLabel}</strong>
-                </div>
-                <div className="live-summary-card">
-                  <span>Next stop</span>
-                  <strong>{nextStopLabel}</strong>
-                </div>
-                <div className="live-summary-card">
-                  <span>Platform</span>
-                  <strong>{data.platform ?? "—"}</strong>
-                </div>
-              </div>
+              {journeyTimeline.length > 0 ? (
+                <div className="live-journey-timeline">
+                  <div className={`ljt-track ${journeyTimeline.length > COMPACT_THRESHOLD ? "dense" : ""}`}>
+                    {journeyTimeline.map((station, idx) => (
+                      <div
+                        key={`${station.code ?? station.name}-${idx}`}
+                        title={station.isCompact ? `${station.name}${station.time ? ` — ${station.time}` : ""}` : undefined}
+                        className={[
+                          "ljt-stop",
+                          station.isOrigin ? "origin" : "",
+                          station.isDestination ? "destination" : "",
+                          station.isCurrent ? "current" : "",
+                          station.isPast ? "past" : "",
+                          station.isCompact ? "compact" : "",
+                        ].filter(Boolean).join(" ")}
+                      >
+                        {station.isCurrent && (
+                          <div className="ljt-current-badge">
+                            <span>Current Location</span>
+                            <TrainFront size={16} />
+                          </div>
+                        )}
 
-              <div className="hero-detail-row">
-                <div className="hero-detail-card">
-                  <span>Speed</span>
-                  <strong>{typeof data?.speedKmph === "number" || typeof data?.speedKmph === "string" ? `${data.speedKmph} km/h` : "—"}</strong>
+                        <span className="ljt-dot" />
+
+                        {!station.isCompact && (
+                          <div className="ljt-label">
+                            <strong>{station.name}</strong>
+                            {station.time && (
+                              <span>{station.isDestination ? "Arr" : "Dep"} {station.time}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="hero-detail-card">
-                  <span>Train status</span>
-                  <strong>{runningStatusLabel}</strong>
+              ) : (
+                <div className="live-summary-grid">
+                  <div className="live-summary-card">
+                    <span>Current location</span>
+                    <strong>{currentLocationLabel}</strong>
+                  </div>
+                  <div className="live-summary-card">
+                    <span>Previous stop</span>
+                    <strong>{previousStopLabel}</strong>
+                  </div>
+                  <div className="live-summary-card">
+                    <span>Next stop</span>
+                    <strong>{nextStopLabel}</strong>
+                  </div>
+                  <div className="live-summary-card">
+                    <span>Platform</span>
+                    <strong>{data.platform ?? "—"}</strong>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </article>
-
-          {/* <article className="enterprise-card">
-            <div className="card-title-row">
-              <Clock3 size={18} />
-              <h3>Live Train Details</h3>
-            </div>
-
-            <div className="data-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", marginTop: 14 }}>
-              {liveDetails.map((item) => (
-                <div key={item.label} className="data-cell">
-                  <div className="card-title-row" style={{ justifyContent: "flex-start" }}>
-                    <span>{item.label}</span>
-                  </div>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
-          </article> */}
 
           <article className="enterprise-card map-card live-route-map-card">
             <div className="card-title-row live-route-header">
@@ -320,44 +493,136 @@ export default function LiveStationBoardPage() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <FitBounds points={routePoints.length > 0 ? routePoints : mapPoints} />
-                    {routePoints.length > 1 && (
-                      <Polyline positions={routePoints} pathOptions={{ color: "#1565c0", weight: 4, opacity: 0.95 }} />
-                    )}
-                  {routeStartPoint && (
-                    <CircleMarker
-                      center={routeStartPoint}
-                      radius={10}
-                      pathOptions={{ color: "#047857", fillColor: "#047857", fillOpacity: 0.95 }}
-                    >
-                      <Popup>
-                        <strong>Start station</strong>
-                      </Popup>
-                    </CircleMarker>
+
+                  {routePoints.length > 1 && (
+                    <Polyline positions={routePoints} pathOptions={{ color: "#123B73", weight: 5, opacity: 0.95 }} />
                   )}
-                  {routeEndPoint && (
-                    <CircleMarker
-                      center={routeEndPoint}
-                      radius={10}
-                      pathOptions={{ color: "#2563eb", fillColor: "#2563eb", fillOpacity: 0.95 }}
-                    >
-                      <Popup>
-                        <strong>End station</strong>
-                      </Popup>
-                    </CircleMarker>
-                  )}
-                  {currentLocationPoint && (
-                    <CircleMarker
-                      center={currentLocationPoint}
-                      radius={12}
-                      pathOptions={{ color: "#ef4444", fillColor: "#ef4444", fillOpacity: 1 }}
-                    >
-                      <Popup>
-                        <strong>Current location</strong>
-                        <br />
-                        {data.currentStation ?? data.currentLocation ?? "Current station"}
-                      </Popup>
-                    </CircleMarker>
-                  )}
+
+                  {( (data?.routeCoordinates && data.routeCoordinates.length > 0) || routeFallbackStations.length > 0) && (() => {
+                    const stationsFromLive = (data?.routeCoordinates ?? [])
+                      .map((p) => {
+                        const lat = parseCoord(p.latitude);
+                        const lng = parseCoord(p.longitude);
+                        return lat !== undefined && lng !== undefined ? { lat, lng, code: p.code, name: p.name } : null;
+                      })
+                      .filter((s) => s !== null) as { lat: number; lng: number; code?: string; name?: string }[];
+
+                    const stationsFromFallback = routeFallbackStations.map((p) => ({ lat: p.lat, lng: p.lng, code: p.code, name: p.name, haltMinutes: p.haltMinutes })) as StationPoint[];
+
+                    const stations: StationPoint[] = stationsFromLive.length > 0 ? stationsFromLive : stationsFromFallback;
+
+                    let currentIndex = -1;
+                    if (currentLocationPoint) {
+                      let best = Infinity;
+                      stations.forEach((s, idx) => {
+                        const d = distanceKm(currentLocationPoint as [number, number], [s.lat, s.lng]);
+                        if (d < best) {
+                          best = d;
+                          currentIndex = idx;
+                        }
+                      });
+                    } else if (data.currentStation) {
+                      const found = stations.findIndex((s) => (s.name && data.currentStation && s.name.toLowerCase() === data.currentStation.toLowerCase()) || (s.code && data.currentStation && s.code.toLowerCase() === data.currentStation.toLowerCase()));
+                      if (found >= 0) currentIndex = found;
+                    }
+
+                    const maxMarkers = 28;
+                    const step = stations.length > maxMarkers ? Math.ceil(stations.length / maxMarkers) : 1;
+
+                    return stations.map((s, idx) => {
+                      const isOrigin = idx === 0;
+                      const isDestination = idx === stations.length - 1;
+                      const isCompleted = currentIndex >= 0 ? idx < currentIndex : false;
+                      const shouldRender = isOrigin || isDestination || idx === currentIndex || idx === currentIndex + 1 || (idx % step === 0);
+                      if (!shouldRender) return null;
+
+                      const isHalt = typeof s.haltMinutes === "number" && s.haltMinutes > 0;
+                      const darkBlue = "#123B73";
+                      const color = isOrigin || isDestination || isHalt ? darkBlue : isCompleted ? "#10b981" : "#2563eb";
+
+                      return (
+                        <CircleMarker
+                          key={`station-${s.code ?? s.name}-${idx}`}
+                          center={[s.lat, s.lng]}
+                          radius={isOrigin || isDestination ? 8 : 5}
+                          pathOptions={{ color, fillColor: color, fillOpacity: 0.95 }}
+                        >
+                            <Popup>
+                              <strong>{s.name ?? "Station"} {s.code ? `(${s.code})` : ""}</strong>
+                              <br />
+                              Seq {idx + 1}
+                            </Popup>
+                        </CircleMarker>
+                      );
+                    });
+                  })()}
+
+                  {currentLocationPoint && (() => {
+                    const trainPos = currentLocationPoint as [number, number];
+
+                    let nextPoint: [number, number] | null = null;
+                    const stationCoords: [number, number][] = (data?.routeCoordinates ?? [])
+                      .map((p) => {
+                        const lat = parseCoord(p.latitude);
+                        const lng = parseCoord(p.longitude);
+                        return lat !== undefined && lng !== undefined ? [lat, lng] as [number, number] : null;
+                      })
+                      .filter((x): x is [number, number] => x !== null);
+
+                    const coords = stationCoords.length > 0 ? stationCoords : routeFallbackStations.map((s) => [s.lat, s.lng] as [number, number]);
+
+                    if (coords.length > 0) {
+                      let best = Infinity;
+                      let nearestIdx = 0;
+                      coords.forEach((s, i) => {
+                        const d = distanceKm(trainPos, s);
+                        if (d < best) { best = d; nearestIdx = i; }
+                      });
+                      if (nearestIdx < coords.length - 1) nextPoint = coords[nearestIdx + 1];
+                    }
+
+                    const brng = nextPoint ? bearingBetween(trainPos, nextPoint) : 0;
+
+                    const iconHtml = `
+                      <div style="transform: rotate(${brng}deg); display:flex; align-items:center; justify-content:center;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2v4" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                          <rect x="3" y="6" width="18" height="11" rx="2" ry="2" fill="#0ea5e9" stroke="#0f172a" stroke-width="1.2" />
+                          <circle cx="8" cy="18.5" r="1.4" fill="#0f172a" />
+                          <circle cx="16" cy="18.5" r="1.4" fill="#0f172a" />
+                        </svg>
+                      </div>`;
+
+                    const icon = typeof L.divIcon === "function" ? L.divIcon({ html: iconHtml, className: "train-div-icon", iconSize: [34, 34], iconAnchor: [17, 17] }) : undefined;
+
+                    return (
+                      <Marker position={trainPos} icon={icon as any}>
+                        <Popup>
+                          <strong>{data.trainNumber} - {data.trainName}</strong>
+                          <br />
+                          <em>Current Location:</em> {data.currentStation ?? data.currentLocation ?? "—"}
+                          <br />
+                          <em>Next stop:</em> {data.nextStation ?? "—"}
+                          <br />
+                          <em>Status:</em> {delayLabel ?? "—"}
+                          <br />
+                          <em>Direction:</em> {nextPoint ? `Towards ${data.nextStation ?? "next"}` : "—"}
+                        </Popup>
+                      </Marker>
+                    );
+                  })()}
+
+                  <div className="route-legend" style={{ position: "absolute", bottom: 10, left: 10, zIndex: 999, background: "rgba(255,255,255,0.95)", padding: '6px 8px', borderRadius: 6, fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 10, height: 10, background: '#10b981', borderRadius: 10, display: 'inline-block' }} /> <span>Completed</span>
+                      <span style={{ width: 10 }} />
+                      <span style={{ width: 10, height: 10, background: '#2563eb', borderRadius: 10, display: 'inline-block' }} /> <span>Upcoming</span>
+                      <span style={{ width: 10 }} />
+                      <span style={{ width: 14, height: 10, background: '#123B73', display: 'inline-block', marginRight: 6 }} /> <span>Route</span>
+                      <span style={{ width: 10 }} />
+                      <span style={{ transform: 'rotate(0deg)', display: 'inline-block' }}>🚆</span> <span>Current Train</span>
+                    </div>
+                  </div>
                 </MapContainer>
               </div>
             ) : (
@@ -371,4 +636,34 @@ export default function LiveStationBoardPage() {
       )}
     </div>
   );
+}
+
+function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function toDegrees(rad: number) {
+  return (rad * 180) / Math.PI;
+}
+
+function bearingBetween(p1: [number, number], p2: [number, number]) {
+  const [lat1, lon1] = p1.map((v) => toRadians(v)) as [number, number];
+  const [lat2, lon2] = p2.map((v) => toRadians(v)) as [number, number];
+  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+  const brng = Math.atan2(y, x);
+  return (toDegrees(brng) + 360) % 360;
+}
+
+function distanceKm(a: [number, number], b: [number, number]) {
+  const R = 6371;
+  const dLat = toRadians(b[0] - a[0]);
+  const dLon = toRadians(b[1] - a[1]);
+  const lat1 = toRadians(a[0]);
+  const lat2 = toRadians(b[0]);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const aVal = sinDLat * sinDLat + sinDLon * sinDLon * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+  return R * c;
 }

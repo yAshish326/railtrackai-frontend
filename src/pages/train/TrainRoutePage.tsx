@@ -99,20 +99,40 @@ export default function TrainRoutePage() {
     await loadRoute();
   }
 
+  const parseCoord = (value: unknown) => {
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value.trim() !== "") {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return undefined;
+  };
+
   // Filter valid route coordinates for Polyline
-  const mapPoints = useMemo(
-    () =>
+  const mapPoints = useMemo(() => {
+    return (
       route?.stations
-        .filter((station) => typeof station.latitude === "number" && typeof station.longitude === "number")
-        .map((station) => [station.latitude as number, station.longitude as number] as [number, number]) ?? [],
-    [route],
-  );
+        .map((station) => {
+          const lat = parseCoord((station as any).latitude);
+          const lng = parseCoord((station as any).longitude);
+          return lat !== undefined && lng !== undefined ? ([lat, lng] as [number, number]) : null;
+        })
+        .filter((p): p is [number, number] => p !== null) ?? []
+    );
+  }, [route]);
 
   // Identify Origin, Destination, and Current station objects
-  const stationsWithCoords = useMemo(
-    () => route?.stations.filter((s) => typeof s.latitude === "number" && typeof s.longitude === "number") ?? [],
-    [route],
-  );
+  const stationsWithCoords = useMemo(() => {
+    return (
+      route?.stations
+        .map((s) => {
+          const lat = parseCoord((s as any).latitude);
+          const lng = parseCoord((s as any).longitude);
+          return lat !== undefined && lng !== undefined ? { ...s, latitude: lat, longitude: lng } : null;
+        })
+        .filter((x): x is any => x !== null) ?? []
+    );
+  }, [route]);
 
   const originStation = stationsWithCoords[0];
   const destStation = stationsWithCoords[stationsWithCoords.length - 1];
@@ -262,14 +282,19 @@ export default function TrainRoutePage() {
                       // Skip specialized markers to avoid rendering duplicates
                       if (isDest || isLive) return null;
 
+                      const isHalt = typeof station.haltMinutes === "number" && station.haltMinutes > 0;
+                      const darkBlue = "#123B73";
+                      const color = isOrigin || isDest || isHalt ? darkBlue : "#475569";
+                      const fillColor = isOrigin || isDest || isHalt ? darkBlue : "#ffffff";
+
                       return (
                         <CircleMarker
                           key={`${station.stationCode}-${station.sequence}-marker`}
                           center={[station.latitude!, station.longitude!]}
                           radius={isOrigin ? 5 : 3.5}
                           pathOptions={{
-                            color: isOrigin ? "#10b981" : "#475569",
-                            fillColor: isOrigin ? "#10b981" : "#ffffff",
+                            color,
+                            fillColor,
                             fillOpacity: 1,
                             weight: 1.5,
                           }}

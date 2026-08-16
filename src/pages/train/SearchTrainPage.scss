@@ -1872,12 +1872,13 @@ html.dark-mode .search-train-page .train-number {
    ROUTE MODAL
 ========================================================= */
 
+
 .route-modal-overlay {
   position: fixed;
 
   inset: 0;
 
-  z-index: 1200;
+  z-index: 2000; // was 999 — raise above the sidebar nav's z-index
 
   display: flex;
   align-items: center;

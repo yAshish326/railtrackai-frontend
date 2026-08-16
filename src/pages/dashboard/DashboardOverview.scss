@@ -876,6 +876,37 @@
   }
 }
 
+  /* Make the right visual slightly smaller on tablet so content breathes */
+  .dashboard-page {
+    .hero-visual {
+      width: 42%;
+    }
+
+    .hero-glow-one {
+      width: 240px;
+      height: 240px;
+      right: 12px;
+      top: -80px;
+    }
+
+    .hero-glow-two {
+      width: 180px;
+      height: 180px;
+      right: 140px;
+      bottom: -110px;
+    }
+
+    .hero-train {
+      width: 48px;
+      height: 58px;
+
+      svg {
+        width: 44px;
+        height: 44px;
+      }
+    }
+  }
+
 /* ============================================================
    Very small phones
    ============================================================ */
@@ -1667,9 +1698,28 @@ body.dark,
       font-size: 36px;
     }
 
-    .hero-visual {
-      width: 48%;
-    }
+      .hero-visual {
+        width: 42%;
+      }
+
+      .hero-glow-one {
+        width: 260px;
+        height: 260px;
+        right: 14px;
+        top: -90px;
+      }
+
+      .hero-glow-two {
+        width: 200px;
+        height: 200px;
+        right: 160px;
+        bottom: -120px;
+      }
+
+      .hero-train {
+        width: 62px;
+        height: 62px;
+      }
 
     .hero-action {
       min-height: 40px;

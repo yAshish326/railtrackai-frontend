@@ -71,6 +71,22 @@ class ApiService {
     }
 
     get<T>(url: string, config: AxiosRequestConfig = {}): Promise<AxiosResponse<T>> {
+        // Prevent any frontend GETs to history endpoints — server-side handles storage.
+        if (typeof url === "string" && url.includes("/history")) {
+            // return an empty successful response without making a network call
+            // eslint-disable-next-line no-console
+            console.info(`Blocked frontend GET to history endpoint: ${url}`);
+            const fake: AxiosResponse<T> = {
+                data: ([]) as unknown as T,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                config: { headers: {} } as any,
+                request: {} as any,
+            };
+            return Promise.resolve(fake);
+        }
+
         const key = `${url}:${JSON.stringify(config.params ?? {})}`;
         const existing = this.inFlightGets.get(key) as Promise<AxiosResponse<T>> | undefined;
 
