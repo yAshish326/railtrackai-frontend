@@ -3,6 +3,7 @@ import { cacheService } from "./cacheService";
 import { historyService } from "./historyService";
 import { AI_CONVERSATIONS_STORAGE_KEY, ROUTES } from "../utils/constants";
 import { getJson } from "../utils/storage";
+import { normalizeStationList } from "../features/train/utils/trainUtils";
 import type { GlobalSearchCategory, GlobalSearchResult } from "../types/GlobalSearch";
 import type { HistoryRecord } from "../types/History";
 import type { Train } from "../types/Train";
@@ -26,7 +27,7 @@ interface SearchSource {
   limit?: number;
 }
 
-const STATIONS = stationsData.data ?? [];
+const STATIONS = normalizeStationList(stationsData);
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();

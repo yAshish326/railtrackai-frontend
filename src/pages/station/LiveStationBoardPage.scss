@@ -383,6 +383,12 @@ $radius-lg: 18px;
   }
 }
 
+// Origin / destination names get extra emphasis — dark + bold, per design ref.
+.hero-endpoint-label {
+  font-weight: 800 !important;
+  color: var(--ent-ink) !important;
+}
+
 .hero-section-label {
   display: block;
   font-size: 10.5px;
@@ -451,28 +457,25 @@ $radius-lg: 18px;
     font-weight: 700;
   }
 }
+
 // =========================================================
-// JOURNEY TIMELINE — compact, responsive origin → current → destination
+// JOURNEY TIMELINE — single line, no horizontal scroll.
+// Stops are flex items that share the available width, so the
+// whole origin -> destination line always fits inside the card.
+// Non-essential stops (isCompact) shrink to a small dot; origin,
+// destination, halts and the current stop keep their labels.
 // =========================================================
 
 .live-journey-timeline {
   padding: 28px 4px 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 .ljt-track {
   display: flex;
   align-items: flex-start;
   width: 100%;
-  min-width: max-content;
   gap: 0;
-
-  // When the stop count is small, stretch evenly to fill the card instead
-  // of clumping on the left.
-  &:not(.dense) {
-    min-width: 100%;
-  }
 }
 
 .ljt-stop {
@@ -481,8 +484,8 @@ $radius-lg: 18px;
   flex-direction: column;
   align-items: center;
   flex: 1 1 0;
-  min-width: 84px;
-  flex-shrink: 0;
+  min-width: 0; // allow shrinking so the row never overflows the card
+  max-width: 140px;
 
   &:not(:last-child)::after {
     content: "";
@@ -500,10 +503,12 @@ $radius-lg: 18px;
     background: var(--ent-accent);
   }
 
-  // compact = intermediate, non-halted stop on a long route: just a dot
+  // compact = intermediate, non-halted stop on a long route: just a dot,
+  // barely taking any width so labeled stops keep the room they need.
   &.compact {
-    flex: 0 0 22px;
-    min-width: 22px;
+    flex: 0 1 14px;
+    max-width: 14px;
+    min-width: 8px;
     cursor: default;
   }
 }
@@ -517,6 +522,7 @@ $radius-lg: 18px;
   background: var(--ent-accent);
   border: 2px solid var(--ent-surface);
   box-shadow: 0 0 0 1px var(--ent-border);
+  flex-shrink: 0;
 }
 
 .ljt-stop.compact .ljt-dot {
@@ -537,7 +543,7 @@ $radius-lg: 18px;
 }
 
 .ljt-stop.past .ljt-dot {
-  background: var(--ent-accent);
+  background: var(--ent-green);
 }
 
 .ljt-stop.current .ljt-dot {
@@ -550,8 +556,9 @@ $radius-lg: 18px;
 .ljt-label {
   margin-top: 10px;
   text-align: center;
-  padding: 0 6px;
-  max-width: 120px;
+  padding: 0 4px;
+  width: 100%;
+  min-width: 0;
 
   strong {
     display: block;
@@ -570,6 +577,16 @@ $radius-lg: 18px;
     color: var(--ent-slate-soft);
     white-space: nowrap;
   }
+}
+
+// Origin & destination names: dark + bold, always fully visible.
+.ljt-stop.origin .ljt-label strong,
+.ljt-stop.destination .ljt-label strong {
+  font-weight: 800;
+  color: var(--ent-ink);
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .ljt-current-badge {
@@ -595,14 +612,14 @@ $radius-lg: 18px;
 }
 
 @media (max-width: 720px) {
-  .ljt-stop { min-width: 64px; }
-  .ljt-label { max-width: 84px; }
-  .ljt-stop.compact { flex-basis: 16px; min-width: 16px; }
+  .ljt-stop { max-width: 96px; }
+  .ljt-stop.compact { flex-basis: 10px; max-width: 10px; }
 }
 
 @media (max-width: 480px) {
   .ljt-current-badge span { display: none; } // icon only on very small screens
-  .ljt-label strong { font-size: 11px; }
+  .ljt-label strong { font-size: 10.5px; }
+  .ljt-stop { max-width: 72px; }
 }
 
 .hero-detail-row {
@@ -678,6 +695,61 @@ $radius-lg: 18px;
     color: var(--ent-ink);
     border-color: var(--ent-border);
   }
+
+  // Compact, properly aligned OSM attribution — small text, tight padding.
+  .leaflet-control-attribution {
+    font-size: 9px;
+    line-height: 1.2;
+    padding: 1px 5px;
+    background: rgba(255, 255, 255, 0.75);
+  }
+}
+
+// Small, clean legend pinned to the bottom-left of the map — replaces the
+// oversized inline-styled legend that used to eat map height.
+.route-legend {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--ent-border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ent-ink);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &.completed { background: var(--ent-green); }
+  &.current   { background: var(--ent-accent); }
+  &.upcoming  { background: #94a3b8; }
+}
+
+@media (max-width: 480px) {
+  .route-legend {
+    gap: 6px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
 }
 
 .empty-panel {
@@ -735,6 +807,9 @@ $radius-lg: 18px;
 
   .route-map-wrap { height: 300px; }
   .skeleton-grid { grid-template-columns: 1fr; }
+
+  // Stack the status card above the map on small screens.
+  .route-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
