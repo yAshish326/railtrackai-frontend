@@ -5,7 +5,7 @@ import LandingNavbar from "../../components/landing/LandingNavbar";
 import FeatureAuthModal from "../../components/auth/FeatureAuthModal";
 import { useAuthStore } from "../../store/authStore";
 import stationsData from "../../data/stations.json";
-import { getSuggestions, normalizeStationLabel, todayIso } from "../../features/train/utils/trainUtils";
+import { getSuggestions, normalizeStationLabel, normalizeStationList, todayIso } from "../../features/train/utils/trainUtils";
 import { ROUTES } from "../../utils/constants";
 import "./LandingPage.scss";
 import landingPageImage from "../../assets/images/Landing-page.png";
@@ -62,7 +62,7 @@ const stats = [
   { value: "Secure", label: "Access" },
 ];
 
-const STATIONS = stationsData.data ?? [];
+const STATIONS = normalizeStationList(stationsData);
 
 type LandingSearchState = {
   fromStation?: string;

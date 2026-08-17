@@ -19,7 +19,7 @@ import stationService from "../../services/stationService";
 import { cacheService } from "../../services/cacheService";
 import { historyService } from "../../services/historyService";
 import { settingsService } from "../../services/settingsService";
-import { getSuggestions } from "../../features/train/utils/trainUtils";
+import { findStationByQuery, getSuggestions } from "../../features/train/utils/trainUtils";
 import type { StationBoardResponse, StationBoardTrain } from "../../types/Station";
 import type { Station } from "../../types/Train";
 import { getApiErrorMessage, formatCompactTime, formatDateTime } from "../../utils/helpers";
@@ -154,7 +154,11 @@ export default function StationBoardPage() {
   const [showStationSuggestions, setShowStationSuggestions] = useState(false);
   const [page, setPage] = useState(1);
 
-  const STATIONS: Station[] = stationsData.data ?? [];
+  const STATIONS: Station[] = Array.isArray(stationsData)
+    ? (stationsData as Station[])
+    : Array.isArray((stationsData as { data?: Station[] } | undefined)?.data)
+      ? (stationsData as { data: Station[] }).data
+      : [];
   const stationSuggestions = getSuggestions(stationCode, STATIONS);
 
   useEffect(() => {
@@ -168,16 +172,20 @@ export default function StationBoardPage() {
   }, [board]);
 
   async function handleLoadBoard(code: string) {
-    const finalCode = code.trim().toUpperCase();
-    if (!finalCode) {
-      setError("Please enter a station code.");
+    const rawValue = code.trim();
+    const matchedStation = findStationByQuery(rawValue, STATIONS) ?? null;
+    const finalCode = matchedStation?.code ?? rawValue.toUpperCase();
+
+    if (!rawValue) {
+      setError("Please enter a station code or station name.");
       return;
     }
-    if (!isKnownStationCode(finalCode, STATIONS)) {
-      setError("Please select a valid station code from the suggestions.");
+    if (!matchedStation && !isKnownStationCode(finalCode, STATIONS)) {
+      setError("Please select a valid station from the suggestions.");
       return;
     }
 
+    setStationCode(finalCode);
     setLoading(true);
     setError(null);
 
@@ -265,7 +273,7 @@ export default function StationBoardPage() {
               <input
                 value={stationCode}
                 onChange={(e) => {
-                  setStationCode(e.target.value.toUpperCase());
+                  setStationCode(e.target.value);
                   setShowStationSuggestions(true);
                 }}
                 onFocus={() => setShowStationSuggestions(true)}

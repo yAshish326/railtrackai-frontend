@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import React, { Children, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -13,12 +13,11 @@ import {
   Route,
 } from "lucide-react";
 
-import { formatDuration, getSuggestions, normalizeStationLabel, normalizeTrain, todayIso } from "../../features/train/utils/trainUtils";
+import { formatDuration, getSuggestions, normalizeStationList, normalizeStationLabel, normalizeTrain, todayIso } from "../../features/train/utils/trainUtils";
 
 import trainService from "../../services/trainService";
 import aiService from "../../services/aiService";
 import { cacheService } from "../../services/cacheService";
-import { historyService } from "../../services/historyService";
 import { settingsService } from "../../services/settingsService";
 import stationsData from "../../data/stations.json";
 import type { SearchTrainResponse, Station } from "../../types/Train";
@@ -28,7 +27,7 @@ import { ROUTES, SEARCH_TTL_MS } from "../../utils/constants";
 
 import "./SearchTrainPage.scss";
 
-const STATIONS: Station[] = stationsData.data ?? [];
+const STATIONS: Station[] = normalizeStationList(stationsData);
 const PAGE_SIZE = 6;
 
 type SortKey = "departure" | "arrival" | "duration" | "trainNumber";
@@ -76,13 +75,23 @@ function StationSuggestionsDropdown({
   children: React.ReactNode;
 }) {
   const rect = useAnchoredPosition(anchorRef, open);
+  const visibleItemCount = Math.min(Children.count(children), 4);
+  const maxDropdownHeight = visibleItemCount * 52 + 14;
+
   if (!open || !rect) return null;
 
   return createPortal(
     <ul
       ref={listRef as React.LegacyRef<HTMLUListElement>}
       className="station-suggestions"
-      style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, right: "auto" }}
+      style={{
+        position: "fixed",
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        right: "auto",
+        maxHeight: `${maxDropdownHeight}px`,
+      }}
     >
       {children}
     </ul>,
@@ -201,15 +210,69 @@ export default function SearchTrainPage() {
 
   const normalizeAiInsight = useCallback((data: unknown): AiInsight | null => {
     if (!data || typeof data !== "object") return null;
-    const raw = data as Record<string, unknown>;
 
-    const fastest = raw.fastestTrain as Record<string, unknown> | undefined;
-    const longest = raw.longestTrain as Record<string, unknown> | undefined;
+    const root = ((data as Record<string, unknown>).data && typeof (data as Record<string, unknown>).data === "object"
+      ? ((data as Record<string, unknown>).data as Record<string, unknown>)
+      : (data as Record<string, unknown>));
+
+    const getTrainNumber = (value: unknown): string | undefined => {
+      if (value == null) return undefined;
+      if (typeof value === "string") {
+        const clean = value.trim();
+        return clean || undefined;
+      }
+      if (typeof value === "number") return String(value);
+      if (typeof value === "object") {
+        const candidate = value as Record<string, unknown>;
+        const match = [candidate.number, candidate.trainNumber, candidate.trainNo, candidate.code, candidate.id]
+          .find((entry) => entry != null && String(entry).trim() !== "");
+        return match == null ? undefined : String(match).trim();
+      }
+      return undefined;
+    };
+
+    const extractTrainCandidate = (...keys: string[]) => {
+      for (const key of keys) {
+        const raw = root[key] ?? root[key.toLowerCase()] ?? root[key.charAt(0).toUpperCase() + key.slice(1)];
+        if (raw == null) continue;
+
+        if (Array.isArray(raw)) {
+          const first = raw[0];
+          const value = getTrainNumber(first);
+          if (value) return { number: value };
+        }
+
+        if (typeof raw === "object") {
+          const value = getTrainNumber(raw);
+          if (value) return { number: value };
+        }
+
+        const value = getTrainNumber(raw);
+        if (value) return { number: value };
+      }
+
+      return undefined;
+    };
+
+    const fastest = extractTrainCandidate("fastestTrain", "fastest", "fastestRoute", "bestTrain");
+    const longest = extractTrainCandidate("longestTrain", "longest", "bestOvernight", "overnightTrain");
+    const insightMessage = [
+      root.insightMessage,
+      root.message,
+      root.summary,
+      root.recommendation,
+      root.aiRecommendation,
+      root.analysis,
+    ].find((value) => typeof value === "string" && value.trim() !== "");
+
+    if (!insightMessage && !fastest?.number && !longest?.number) {
+      return null;
+    }
 
     return {
-      insightMessage: typeof raw.insightMessage === "string" ? raw.insightMessage : "",
-      fastestTrain: fastest?.number != null ? { number: String(fastest.number) } : undefined,
-      longestTrain: longest?.number != null ? { number: String(longest.number) } : undefined,
+      insightMessage: typeof insightMessage === "string" && insightMessage.trim() ? insightMessage.trim() : "AI recommendations are ready for this route.",
+      fastestTrain: fastest?.number ? { number: fastest.number } : undefined,
+      longestTrain: longest?.number ? { number: longest.number } : undefined,
     };
   }, []);
 
@@ -402,15 +465,6 @@ export default function SearchTrainPage() {
       if (settings.cache.enabled) {
         cacheService.set("TRAIN", { from: finalFrom, to: finalTo, date: finalDate }, res.data, settings.cache.ttlMinutes * 60 * 1000 || SEARCH_TTL_MS);
       }
-
-      if (settings.history.autoSave) {
-        historyService.record(
-          "TRAIN",
-          { from: finalFrom, to: finalTo, date: finalDate },
-          res.data,
-          `${res.data.totalTrains} train(s) from ${res.data.source} to ${res.data.destination}`,
-        );
-      }
     } catch (error) {
       setResult(null);
       setError(getApiErrorMessage(error, "Failed to fetch train schedules. Please try again."));
@@ -541,6 +595,8 @@ export default function SearchTrainPage() {
 
   const fromSuggestions = getSuggestions(fromQuery, STATIONS);
   const toSuggestions = getSuggestions(toQuery, STATIONS);
+  const shouldShowFromSuggestions = showFromSuggestions && Boolean(fromQuery.trim()) && fromSuggestions.length > 0;
+  const shouldShowToSuggestions = showToSuggestions && Boolean(toQuery.trim()) && toSuggestions.length > 0;
   const [routeModalOpen, setRouteModalOpen] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
@@ -801,34 +857,28 @@ return (
           <StationSuggestionsDropdown
             anchorRef={fromRef}
             listRef={fromSuggestionsRef}
-            open={showFromSuggestions && Boolean(fromQuery.trim())}
+            open={shouldShowFromSuggestions}
           >
-            {fromSuggestions.length > 0 ? (
-              fromSuggestions.map((station) => (
-                <li
-                  key={station.code}
-                  onClick={() =>
-                    handleSelectFrom(station)
-                  }
-                >
-                  <div className="suggestion-station-icon">
-                    <TrainTrack size={16} />
-                  </div>
+            {fromSuggestions.map((station) => (
+              <li
+                key={station.code}
+                onClick={() =>
+                  handleSelectFrom(station)
+                }
+              >
+                <div className="suggestion-station-icon">
+                  <TrainTrack size={16} />
+                </div>
 
-                  <div className="suggestion-info">
-                    <strong>
-                      {normalizeStationLabel(station)}
-                    </strong>
-                  </div>
+                <div className="suggestion-info">
+                  <strong>
+                    {normalizeStationLabel(station)}
+                  </strong>
+                </div>
 
-                  <ChevronRight size={16} />
-                </li>
-              ))
-            ) : (
-              <li className="no-station-result">
-                No matching stations
+                <ChevronRight size={16} />
               </li>
-            )}
+            ))}
           </StationSuggestionsDropdown>
         </div>
 
@@ -867,7 +917,7 @@ return (
                 value={toQuery}
                 onChange={(e) => {
                   setToQuery(e.target.value);
-                  setToCode("");
+                  // setToCode("");
                   setShowToSuggestions(true);
                 }}
                 onFocus={() => setShowToSuggestions(true)}
@@ -886,34 +936,26 @@ return (
           <StationSuggestionsDropdown
             anchorRef={toRef}
             listRef={toSuggestionsRef}
-            open={showToSuggestions && Boolean(toQuery.trim())}
+            open={shouldShowToSuggestions}
           >
-            {toSuggestions.length > 0 ? (
-              toSuggestions.map((station) => (
-                <li
-                  key={station.code}
-                  onClick={() =>
-                    handleSelectTo(station)
-                  }
-                >
-                  <div className="suggestion-station-icon">
-                    <MapPin size={16} />
-                  </div>
+            {toSuggestions.map((station) => (
+              <li
+                key={station.code}
+                onClick={() => handleSelectTo(station)}
+              >
+                <div className="suggestion-station-icon">
+                  <MapPin size={16} />
+                </div>
 
-                  <div className="suggestion-info">
-                    <strong>
-                      {normalizeStationLabel(station)}
-                    </strong>
-                  </div>
+                <div className="suggestion-info">
+                  <strong>
+                    {normalizeStationLabel(station)}
+                  </strong>
+                </div>
 
-                  <ChevronRight size={16} />
-                </li>
-              ))
-            ) : (
-              <li className="no-station-result">
-                No matching stations
+                <ChevronRight size={16} />
               </li>
-            )}
+            ))}
           </StationSuggestionsDropdown>
         </div>
 

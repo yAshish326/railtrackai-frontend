@@ -586,12 +586,13 @@ html.dark-mode .search-train-page .train-number {
 
   width: 100%;
   height: auto;
-  max-height: 280px;
+  max-height: min(220px, calc(4 * 52px + 18px));
 
   margin: 0;
   padding: 6px 0;
 
   overflow-y: auto;
+  overflow-x: hidden;
 
   list-style: none;
 

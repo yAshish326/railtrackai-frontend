@@ -7,7 +7,6 @@ import { AlertTriangle, MapPinned, Search, TrainFront } from "lucide-react";
 
 import trainService from "../../services/trainService";
 import { cacheService } from "../../services/cacheService";
-import { historyService } from "../../services/historyService";
 import { settingsService } from "../../services/settingsService";
 import { getApiErrorMessage } from "../../utils/helpers";
 
@@ -22,11 +21,12 @@ interface LiveStationPoint {
   platform?: string;
   latitude?: number;
   longitude?: number;
+  // Used by the Route API to determine whether a train actually halts here.
+  haltMinutes?: number | null;
+  halt?: number | null;
+  halt_min?: number | null;
 }
 
-// Superset used for both the map fallback AND the journey timeline —
-// carries halt info + times, sourced from the full route (same data the
-// route modal / route page use), not just coordinates.
 type StationPoint = {
   lat: number;
   lng: number;
@@ -37,18 +37,20 @@ type StationPoint = {
   departure?: string;
 };
 
-type TimelineStop = {
+type JourneyStation = {
   code?: string;
   name: string;
   time?: string;
+  lat?: number;
+  lng?: number;
   isOrigin: boolean;
   isDestination: boolean;
   isCurrent: boolean;
   isPast: boolean;
-  isCompact: boolean; // rendered as a small unlabeled dot
+  // Kept for compatibility with the existing timeline implementation.
+  // Currently we do not hide stations just because the list is large.
+  isCompact: boolean;
 };
-
-const COMPACT_THRESHOLD = 6; // beyond this many stops, non-essential stops shrink to plain dots
 
 interface LiveTrainSnapshot {
   trainNumber?: string;
@@ -72,6 +74,75 @@ interface LiveTrainSnapshot {
   routeCoordinates?: LiveStationPoint[];
 }
 
+// =========================================================
+// LOCAL STORAGE — persists the last live search so a page
+// refresh restores it without re-hitting the API.
+// =========================================================
+
+const LIVE_STATUS_STORAGE_KEY = "railtrack_live_status";
+
+interface LocalLiveSearch {
+  trainNumber: string;
+  date: string;
+  response: LiveTrainSnapshot;
+  routeStations: StationPoint[];
+  savedAt: number;
+}
+
+function getLocalLiveSearch(trainNumber?: string, date?: string): LocalLiveSearch | null {
+  if (typeof window === "undefined" || !trainNumber || !date) return null;
+
+  try {
+    const raw = window.localStorage.getItem(LIVE_STATUS_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as LocalLiveSearch;
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const normalizedTrainNumber = trainNumber.trim().toUpperCase();
+    if (parsed.trainNumber !== normalizedTrainNumber || parsed.date !== date) return null;
+
+    return parsed;
+  } catch (error) {
+    // localStorage must never break the live-status page.
+    console.debug("Unable to read local live status:", error);
+    return null;
+  }
+}
+
+function saveLocalLiveSearch(trainNumber: string, date: string, response: LiveTrainSnapshot, routeStations: StationPoint[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const localData: LocalLiveSearch = {
+      trainNumber: trainNumber.trim().toUpperCase(),
+      date,
+      response,
+      routeStations,
+      savedAt: Date.now(),
+    };
+    window.localStorage.setItem(LIVE_STATUS_STORAGE_KEY, JSON.stringify(localData));
+  } catch (error) {
+    // Do not let localStorage quota/security problems break the app.
+    console.debug("Unable to save live status locally:", error);
+  }
+}
+
+// =========================================================
+// STATION NAME MATCHING
+// =========================================================
+
+function normalizeStationText(value?: string | null) {
+  return (value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function matchesStation(value?: string | null, candidate?: string | null) {
+  const left = normalizeStationText(value);
+  const right = normalizeStationText(candidate);
+  if (!left || !right) return false;
+  return left === right || right.includes(left) || left.includes(right);
+}
+
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
 
@@ -89,22 +160,31 @@ function FitBounds({ points }: { points: [number, number][] }) {
 export default function LiveStationBoardPage() {
   const location = useLocation();
   const initialSearchState = (location.state as { trainNumber?: string; date?: string } | null) ?? null;
-  const cached = cacheService.getLatest<LiveTrainSnapshot>("LIVE");
 
-  const initialTrain = initialSearchState?.trainNumber ?? String(cached?.request.trainNumber ?? "");
-  const initialDate = initialSearchState?.date ?? new Date().toISOString().slice(0, 10);
+  const cached = cacheService.getLatest<LiveTrainSnapshot>("LIVE");
+  const cachedTrainNumber = String(cached?.request?.trainNumber ?? "");
+  const cachedDate = String(cached?.request?.date ?? "");
+
+  const localCached = getLocalLiveSearch(
+    initialSearchState?.trainNumber ?? cachedTrainNumber,
+    initialSearchState?.date ?? cachedDate,
+  );
+
+  const initialTrain = initialSearchState?.trainNumber ?? localCached?.trainNumber ?? cachedTrainNumber;
+  const initialDate =
+    initialSearchState?.date ?? localCached?.date ?? cachedDate ?? new Date().toISOString().slice(0, 10);
 
   const [trainNumber, setTrainNumber] = useState(initialTrain);
   const [journeyDate, setJourneyDate] = useState(initialDate);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<LiveTrainSnapshot | null>(cached?.response ?? null);
-  // Full route stations (with halt info + times), used for the map coordinate
-  // fallback AND as the source of truth for the compact journey timeline.
-  const [routeFallbackStations, setRouteFallbackStations] = useState<StationPoint[]>([]);
+
+  // Restore from localStorage first; existing cache remains as fallback.
+  const [data, setData] = useState<LiveTrainSnapshot | null>(localCached?.response ?? cached?.response ?? null);
+  const [routeFallbackStations, setRouteFallbackStations] = useState<StationPoint[]>(localCached?.routeStations ?? []);
 
   const parseCoord = useCallback((value: unknown) => {
-    if (typeof value === "number") return value;
+    if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
     if (typeof value === "string" && value.trim() !== "") {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : undefined;
@@ -115,14 +195,9 @@ export default function LiveStationBoardPage() {
   const handleSearch = useCallback(async (number?: string, date?: string) => {
     const finalNumber = (number ?? trainNumber).trim().toUpperCase();
     const finalDate = (date ?? journeyDate).trim();
-    if (!finalNumber) {
-      setError("Enter a train number.");
-      return;
-    }
-    if (!finalDate) {
-      setError("Select a journey date.");
-      return;
-    }
+
+    if (!finalNumber) return setError("Enter a train number.");
+    if (!finalDate) return setError("Select a journey date.");
 
     setLoading(true);
     setError(null);
@@ -132,12 +207,18 @@ export default function LiveStationBoardPage() {
       const payload = response.data as LiveTrainSnapshot;
       setData(payload);
 
-      // Always resolve the full route (halt minutes + arrival/departure) so the
-      // compact timeline can apply the same "halted stations" logic as the
-      // route modal/page. Reuse the ROUTE cache first — this is the same
-      // cache bucket TrainRoutePage writes to, so we often avoid a fresh
-      // RailRadar call entirely.
       const settings = settingsService.getSettings();
+
+      // Save immediately — even if the Route API fails below, the live
+      // response is still restorable after a refresh.
+      saveLocalLiveSearch(finalNumber, finalDate, payload, []);
+
+      if (settings.cache.enabled) {
+        cacheService.set("LIVE", { trainNumber: finalNumber, date: finalDate }, payload, settings.cache.ttlMinutes * 60 * 1000);
+      }
+
+      // Route data (halt minutes + arrival/departure) is supplementary —
+      // live status must keep working even if this fails.
       try {
         let stations: any[] = [];
 
@@ -145,9 +226,7 @@ export default function LiveStationBoardPage() {
           const cachedRoute = cacheService.get<{ trainNumber: string }, { stations?: any[] }>("ROUTE", {
             trainNumber: finalNumber,
           });
-          if (cachedRoute?.response?.stations?.length) {
-            stations = cachedRoute.response.stations;
-          }
+          if (cachedRoute?.response?.stations?.length) stations = cachedRoute.response.stations;
         }
 
         if (stations.length === 0) {
@@ -160,47 +239,44 @@ export default function LiveStationBoardPage() {
 
         const mapped: StationPoint[] = stations
           .map((s) => {
-            const lat = parseCoord((s as any).latitude);
-            const lng = parseCoord((s as any).longitude);
-            const halt = parseCoord((s as any).haltMinutes ?? (s as any).halt ?? (s as any).halt_min);
+            const lat = parseCoord(s.latitude);
+            const lng = parseCoord(s.longitude);
+            const halt = parseCoord(s.haltMinutes ?? s.halt ?? s.halt_min);
             if (lat === undefined || lng === undefined) return null;
             return {
               lat,
               lng,
-              code: (s as any).stationCode,
-              name: (s as any).stationName,
+              code: s.stationCode,
+              name: s.stationName,
               haltMinutes: halt ?? null,
-              arrival: (s as any).arrival,
-              departure: (s as any).departure,
+              arrival: s.arrival,
+              departure: s.departure,
             } as StationPoint;
           })
           .filter((s): s is StationPoint => s !== null);
 
-        if (mapped.length > 0) setRouteFallbackStations(mapped);
-      } catch (err) {
-        // route fetch is optional context — don't block the live status view
-        // eslint-disable-next-line no-console
-        console.debug("Route fallback failed:", err);
+        if (mapped.length > 0) {
+          setRouteFallbackStations(mapped);
+          saveLocalLiveSearch(finalNumber, finalDate, payload, mapped);
+        }
+      } catch (routeError) {
+        console.debug("Route fallback failed:", routeError);
       }
 
-      if (settings.cache.enabled) {
-        cacheService.set("LIVE", { trainNumber: finalNumber, date: finalDate }, payload, settings.cache.ttlMinutes * 60 * 1000);
-      }
-      if (settings.history.autoSave) {
-        historyService.record("LIVE", { trainNumber: finalNumber, date: finalDate }, payload, `Live status for ${finalNumber} on ${finalDate}`);
-      }
+      // NOTE: historyService.record(...) is intentionally NOT called here —
+      // this page must not generate a history API request.
     } catch (err) {
       setData(null);
       setError(getApiErrorMessage(err, "Unable to fetch live train status."));
     } finally {
       setLoading(false);
     }
-  }, [journeyDate, trainNumber]);
+  }, [journeyDate, trainNumber, parseCoord]);
 
   useEffect(() => {
-    if (!initialSearchState?.trainNumber) {
-      return;
-    }
+    // Navigated in with a trainNumber/date -> run a normal search.
+    // A plain refresh with a local result already restored needs no API call.
+    if (!initialSearchState?.trainNumber) return;
 
     const timerId = window.setTimeout(() => {
       void handleSearch(initialSearchState.trainNumber, initialSearchState.date ?? initialDate);
@@ -220,7 +296,7 @@ export default function LiveStationBoardPage() {
         ?.map((point) => {
           const lat = parseCoord(point.latitude);
           const lng = parseCoord(point.longitude);
-          return lat !== undefined && lng !== undefined ? [lat, lng] as [number, number] : undefined;
+          return lat !== undefined && lng !== undefined ? ([lat, lng] as [number, number]) : undefined;
         })
         .filter((point): point is [number, number] => typeof point !== "undefined") ?? []
     );
@@ -231,8 +307,29 @@ export default function LiveStationBoardPage() {
   const currentLocationPoint = useMemo<[number, number] | null>(() => {
     const lat = parseCoord(data?.latitude);
     const lng = parseCoord(data?.longitude);
-    return lat !== undefined && lng !== undefined ? [lat, lng] : null;
-  }, [data, parseCoord]);
+    if (lat !== undefined && lng !== undefined) return [lat, lng];
+
+    // Fall back to matching the current station name/code against the route.
+    const stationLookup: Array<{ lat?: number; lng?: number; code?: string; name?: string }> =
+      routeFallbackStations.length > 0
+        ? routeFallbackStations
+        : (data?.routeCoordinates ?? []).map((point) => ({
+            lat: parseCoord(point.latitude),
+            lng: parseCoord(point.longitude),
+            code: point.code,
+            name: point.name,
+          }));
+
+    const currentKey = data?.currentStation ?? data?.currentLocation ?? data?.nextStation;
+    if (!currentKey) return null;
+
+    const matched = stationLookup.find((s) => {
+      if (typeof s.lat !== "number" || typeof s.lng !== "number") return false;
+      return matchesStation(currentKey, s.code) || matchesStation(currentKey, s.name);
+    });
+
+    return matched && typeof matched.lat === "number" && typeof matched.lng === "number" ? [matched.lat, matched.lng] : null;
+  }, [data, parseCoord, routeFallbackStations]);
 
   const mapPoints = currentLocationPoint ? [currentLocationPoint] : routePoints;
   const mapCenter = mapPoints[0] ?? [20.5937, 78.9629];
@@ -247,40 +344,50 @@ export default function LiveStationBoardPage() {
   const previousStopLabel = data?.previousStation ?? "Not available";
   const nextStopLabel = data?.nextStation ?? "Not available";
   const runningStatusLabel = data?.runningStatus ? data.runningStatus.replace(/_/g, " ") : "Not started";
-  const statusText = delayLabel
-    ? `${runningStatusLabel} • ${delayLabel}`
-    : runningStatusLabel;
+  const statusText = delayLabel ? `${runningStatusLabel} • ${delayLabel}` : runningStatusLabel;
 
   const originLabel = (() => {
     if (routeFallbackStations.length > 0) return routeFallbackStations[0].name ?? routeFallbackStations[0].code ?? "Unknown";
     if (data?.timeline && data.timeline.length > 0) {
       const first = data.timeline[0];
-      return (first.name ?? (first as any).stationName ?? first.code) ?? "Unknown";
+      return first.name ?? (first as any).stationName ?? first.code ?? "Unknown";
     }
-    if (data?.routeCoordinates && data.routeCoordinates.length > 0) return data.routeCoordinates[0].name ?? data.routeCoordinates[0].code ?? "Unknown";
+    if (data?.routeCoordinates && data.routeCoordinates.length > 0) {
+      return data.routeCoordinates[0].name ?? data.routeCoordinates[0].code ?? "Unknown";
+    }
     return "Unknown";
   })();
 
   const destinationLabel = (() => {
-    if (routeFallbackStations.length > 0) return routeFallbackStations[routeFallbackStations.length - 1].name ?? routeFallbackStations[routeFallbackStations.length - 1].code ?? "Unknown";
+    if (routeFallbackStations.length > 0) {
+      const last = routeFallbackStations[routeFallbackStations.length - 1];
+      return last.name ?? last.code ?? "Unknown";
+    }
     if (data?.timeline && data.timeline.length > 0) {
       const last = data.timeline[data.timeline.length - 1];
-      return (last.name ?? (last as any).stationName ?? last.code) ?? "Unknown";
+      return last.name ?? (last as any).stationName ?? last.code ?? "Unknown";
     }
-    if (data?.routeCoordinates && data.routeCoordinates.length > 0) return data.routeCoordinates[data.routeCoordinates.length - 1].name ?? data.routeCoordinates[data.routeCoordinates.length - 1].code ?? "Unknown";
+    if (data?.routeCoordinates && data.routeCoordinates.length > 0) {
+      const last = data.routeCoordinates[data.routeCoordinates.length - 1];
+      return last.name ?? last.code ?? "Unknown";
+    }
     return "Unknown";
   })();
 
-  // Compact journey timeline: origin -> halted stations -> current -> destination.
-  // Same filtering rule as the route modal (haltMinutes > 0, plus origin/destination),
-  // with the current station forced in even if it isn't a halt point. Anything past
-  // COMPACT_THRESHOLD collapses non-essential stops into small unlabeled dots.
-  const journeyTimeline = useMemo<TimelineStop[]>(() => {
-    // Prefer the full route (has haltMinutes) — fall back to whatever the live
-    // payload provided if the route fetch didn't come back.
+  // Prefer the full route (haltMinutes + lat/lng); keep origin, destination,
+  // actual halts and the current station — drop plain pass-through points.
+  const journeyStations = useMemo<JourneyStation[]>(() => {
     const source: Array<LiveStationPoint & { haltMinutes?: number | null }> =
       routeFallbackStations.length > 0
-        ? routeFallbackStations.map((s) => ({ code: s.code, name: s.name, arrival: s.arrival, departure: s.departure, haltMinutes: s.haltMinutes }))
+        ? routeFallbackStations.map((s) => ({
+            code: s.code,
+            name: s.name,
+            arrival: s.arrival,
+            departure: s.departure,
+            haltMinutes: s.haltMinutes,
+            latitude: s.lat,
+            longitude: s.lng,
+          }))
         : data?.timeline && data.timeline.length > 0
         ? data.timeline
         : data?.upcomingStations && data.upcomingStations.length > 0
@@ -293,28 +400,27 @@ export default function LiveStationBoardPage() {
 
     let currentIdx = currentLabel
       ? source.findIndex((s) => {
-          const name = (s.name ?? (s as any).stationName ?? "").toLowerCase();
-          const code = (s.code ?? (s as any).stationCode ?? "").toLowerCase();
+          const name = (s.name ?? (s as any).stationName ?? "").toLowerCase().trim();
+          const code = (s.code ?? (s as any).stationCode ?? "").toLowerCase().trim();
           return name === currentLabel || code === currentLabel;
         })
       : -1;
 
     if (currentIdx === -1 && currentLabel) {
       currentIdx = source.findIndex((s) => {
-        const name = (s.name ?? (s as any).stationName ?? "").toLowerCase();
+        const name = (s.name ?? (s as any).stationName ?? "").toLowerCase().trim();
         return Boolean(name) && (currentLabel.includes(name) || name.includes(currentLabel));
       });
     }
 
     const lastIdx = source.length - 1;
 
-    // Same rule as the route modal: keep origin, destination, halted stations —
-    // plus always keep the current station even if it has no halt.
     const kept = source
       .map((s, idx) => ({ s, idx }))
-      .filter(({ s, idx }) => (s.haltMinutes ?? 0) > 0 || idx === 0 || idx === lastIdx || idx === currentIdx);
-
-    const total = kept.length;
+      .filter(({ s, idx }) => {
+        const isHalt = Number(s.haltMinutes ?? s.halt ?? s.halt_min ?? 0) > 0;
+        return isHalt || idx === 0 || idx === lastIdx || idx === currentIdx;
+      });
 
     return kept.map(({ s, idx }) => {
       const isOrigin = idx === 0;
@@ -323,15 +429,23 @@ export default function LiveStationBoardPage() {
       return {
         code: s.code ?? (s as any).stationCode,
         name: (s.name ?? (s as any).stationName ?? s.code ?? "Station") as string,
-        time: s.departure || s.arrival,
+        time: s.departure ?? s.arrival,
+        lat: parseCoord(s.latitude),
+        lng: parseCoord(s.longitude),
         isOrigin,
         isDestination,
         isCurrent,
         isPast: currentIdx >= 0 ? idx < currentIdx : false,
-        isCompact: total > COMPACT_THRESHOLD && !isOrigin && !isDestination && !isCurrent,
+        // We are not hiding important stations — all retained stops render normally.
+        isCompact: false,
       };
     });
-  }, [data, routeFallbackStations]);
+  }, [data, routeFallbackStations, parseCoord]);
+
+  const mapStations = useMemo(
+    () => journeyStations.filter((s): s is JourneyStation & { lat: number; lng: number } => s.lat !== undefined && s.lng !== undefined),
+    [journeyStations],
+  );
 
   return (
     <div className="enterprise-page live-status-page">
@@ -399,12 +513,12 @@ export default function LiveStationBoardPage() {
               <div className="hero-panel-row hero-stat-row">
                 <div>
                   <span className="hero-section-label">From</span>
-                  <strong>{originLabel}</strong>
+                  <strong className="hero-endpoint-label">{originLabel}</strong>
                   <p>Origin station</p>
                 </div>
                 <div>
                   <span className="hero-section-label">To</span>
-                  <strong>{destinationLabel}</strong>
+                  <strong className="hero-endpoint-label">{destinationLabel}</strong>
                   <p>Destination station</p>
                 </div>
                 <div>
@@ -419,20 +533,18 @@ export default function LiveStationBoardPage() {
                 <p className="hero-status-caption">{statusText}</p>
               </div>
 
-              {journeyTimeline.length > 0 ? (
+              {journeyStations.length > 0 ? (
                 <div className="live-journey-timeline">
-                  <div className={`ljt-track ${journeyTimeline.length > COMPACT_THRESHOLD ? "dense" : ""}`}>
-                    {journeyTimeline.map((station, idx) => (
+                  <div className="ljt-track">
+                    {journeyStations.map((station, idx) => (
                       <div
                         key={`${station.code ?? station.name}-${idx}`}
-                        title={station.isCompact ? `${station.name}${station.time ? ` — ${station.time}` : ""}` : undefined}
                         className={[
                           "ljt-stop",
                           station.isOrigin ? "origin" : "",
                           station.isDestination ? "destination" : "",
                           station.isCurrent ? "current" : "",
                           station.isPast ? "past" : "",
-                          station.isCompact ? "compact" : "",
                         ].filter(Boolean).join(" ")}
                       >
                         {station.isCurrent && (
@@ -444,14 +556,12 @@ export default function LiveStationBoardPage() {
 
                         <span className="ljt-dot" />
 
-                        {!station.isCompact && (
-                          <div className="ljt-label">
-                            <strong>{station.name}</strong>
-                            {station.time && (
-                              <span>{station.isDestination ? "Arr" : "Dep"} {station.time}</span>
-                            )}
-                          </div>
-                        )}
+                        <div className="ljt-label">
+                          <strong title={station.name}>{station.name}</strong>
+                          {station.time && (
+                            <span>{station.isDestination ? "Arr" : "Dep"} {station.time}</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -488,86 +598,59 @@ export default function LiveStationBoardPage() {
             {mapPoints.length > 0 ? (
               <div className="route-map-wrap" style={{ marginTop: 14 }}>
                 <MapContainer center={mapCenter} zoom={5} scrollWheelZoom className="route-map">
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
+                  <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <FitBounds points={routePoints.length > 0 ? routePoints : mapPoints} />
 
                   {routePoints.length > 1 && (
                     <Polyline positions={routePoints} pathOptions={{ color: "#123B73", weight: 5, opacity: 0.95 }} />
                   )}
 
-                  {( (data?.routeCoordinates && data.routeCoordinates.length > 0) || routeFallbackStations.length > 0) && (() => {
-                    const stationsFromLive = (data?.routeCoordinates ?? [])
-                      .map((p) => {
-                        const lat = parseCoord(p.latitude);
-                        const lng = parseCoord(p.longitude);
-                        return lat !== undefined && lng !== undefined ? { lat, lng, code: p.code, name: p.name } : null;
-                      })
-                      .filter((s) => s !== null) as { lat: number; lng: number; code?: string; name?: string }[];
+                  {mapStations.map((station, idx) => {
+                    const darkBlue = "#123B73";
+                    const green = "#16a34a";
+                    const blue = "#2563eb";
+                    const outline = "#94a3b8";
 
-                    const stationsFromFallback = routeFallbackStations.map((p) => ({ lat: p.lat, lng: p.lng, code: p.code, name: p.name, haltMinutes: p.haltMinutes })) as StationPoint[];
+                    let color = outline;
+                    let radius = 5.5;
+                    let fillOpacity = 0.7;
 
-                    const stations: StationPoint[] = stationsFromLive.length > 0 ? stationsFromLive : stationsFromFallback;
-
-                    let currentIndex = -1;
-                    if (currentLocationPoint) {
-                      let best = Infinity;
-                      stations.forEach((s, idx) => {
-                        const d = distanceKm(currentLocationPoint as [number, number], [s.lat, s.lng]);
-                        if (d < best) {
-                          best = d;
-                          currentIndex = idx;
-                        }
-                      });
-                    } else if (data.currentStation) {
-                      const found = stations.findIndex((s) => (s.name && data.currentStation && s.name.toLowerCase() === data.currentStation.toLowerCase()) || (s.code && data.currentStation && s.code.toLowerCase() === data.currentStation.toLowerCase()));
-                      if (found >= 0) currentIndex = found;
+                    if (station.isOrigin || station.isDestination) {
+                      color = darkBlue; radius = 8; fillOpacity = 1;
+                    } else if (station.isCurrent) {
+                      color = blue; radius = 8; fillOpacity = 1;
+                    } else if (station.isPast) {
+                      color = green; radius = 5.5; fillOpacity = 0.95;
                     }
 
-                    const maxMarkers = 28;
-                    const step = stations.length > maxMarkers ? Math.ceil(stations.length / maxMarkers) : 1;
-
-                    return stations.map((s, idx) => {
-                      const isOrigin = idx === 0;
-                      const isDestination = idx === stations.length - 1;
-                      const isCompleted = currentIndex >= 0 ? idx < currentIndex : false;
-                      const shouldRender = isOrigin || isDestination || idx === currentIndex || idx === currentIndex + 1 || (idx % step === 0);
-                      if (!shouldRender) return null;
-
-                      const isHalt = typeof s.haltMinutes === "number" && s.haltMinutes > 0;
-                      const darkBlue = "#123B73";
-                      const color = isOrigin || isDestination || isHalt ? darkBlue : isCompleted ? "#10b981" : "#2563eb";
-
-                      return (
-                        <CircleMarker
-                          key={`station-${s.code ?? s.name}-${idx}`}
-                          center={[s.lat, s.lng]}
-                          radius={isOrigin || isDestination ? 8 : 5}
-                          pathOptions={{ color, fillColor: color, fillOpacity: 0.95 }}
-                        >
-                            <Popup>
-                              <strong>{s.name ?? "Station"} {s.code ? `(${s.code})` : ""}</strong>
-                              <br />
-                              Seq {idx + 1}
-                            </Popup>
-                        </CircleMarker>
-                      );
-                    });
-                  })()}
+                    return (
+                      <CircleMarker
+                        key={`station-${station.code ?? station.name}-${idx}`}
+                        center={[station.lat, station.lng]}
+                        radius={radius}
+                        pathOptions={{ color, fillColor: color, fillOpacity, weight: station.isCurrent ? 3 : 2 }}
+                      >
+                        <Popup>
+                          <strong>{station.name} {station.code ? `(${station.code})` : ""}</strong>
+                          <br />
+                          {station.isOrigin ? "Origin" : station.isDestination ? "Destination" : station.isCurrent ? "Current / Next Halt" : station.isPast ? "Completed" : "Upcoming Halt"}
+                          {station.time ? <><br />{station.isDestination ? "Arr" : "Dep"} {station.time}</> : null}
+                        </Popup>
+                      </CircleMarker>
+                    );
+                  })}
 
                   {currentLocationPoint && (() => {
                     const trainPos = currentLocationPoint as [number, number];
 
                     let nextPoint: [number, number] | null = null;
                     const stationCoords: [number, number][] = (data?.routeCoordinates ?? [])
-                      .map((p) => {
-                        const lat = parseCoord(p.latitude);
-                        const lng = parseCoord(p.longitude);
-                        return lat !== undefined && lng !== undefined ? [lat, lng] as [number, number] : null;
+                      .map((point) => {
+                        const lat = parseCoord(point.latitude);
+                        const lng = parseCoord(point.longitude);
+                        return lat !== undefined && lng !== undefined ? ([lat, lng] as [number, number]) : null;
                       })
-                      .filter((x): x is [number, number] => x !== null);
+                      .filter((point): point is [number, number] => point !== null);
 
                     const coords = stationCoords.length > 0 ? stationCoords : routeFallbackStations.map((s) => [s.lat, s.lng] as [number, number]);
 
@@ -581,10 +664,10 @@ export default function LiveStationBoardPage() {
                       if (nearestIdx < coords.length - 1) nextPoint = coords[nearestIdx + 1];
                     }
 
-                    const brng = nextPoint ? bearingBetween(trainPos, nextPoint) : 0;
+                    const bearing = nextPoint ? bearingBetween(trainPos, nextPoint) : 0;
 
                     const iconHtml = `
-                      <div style="transform: rotate(${brng}deg); display:flex; align-items:center; justify-content:center;">
+                      <div style="transform: rotate(${bearing}deg); display:flex; align-items:center; justify-content:center;">
                         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M12 2v4" stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                           <rect x="3" y="6" width="18" height="11" rx="2" ry="2" fill="#0ea5e9" stroke="#0f172a" stroke-width="1.2" />
@@ -593,7 +676,7 @@ export default function LiveStationBoardPage() {
                         </svg>
                       </div>`;
 
-                    const icon = typeof L.divIcon === "function" ? L.divIcon({ html: iconHtml, className: "train-div-icon", iconSize: [34, 34], iconAnchor: [17, 17] }) : undefined;
+                    const icon = L.divIcon({ html: iconHtml, className: "train-div-icon", iconSize: [34, 34], iconAnchor: [17, 17] });
 
                     return (
                       <Marker position={trainPos} icon={icon as any}>
@@ -612,16 +695,10 @@ export default function LiveStationBoardPage() {
                     );
                   })()}
 
-                  <div className="route-legend" style={{ position: "absolute", bottom: 10, left: 10, zIndex: 999, background: "rgba(255,255,255,0.95)", padding: '6px 8px', borderRadius: 6, fontSize: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 10, height: 10, background: '#10b981', borderRadius: 10, display: 'inline-block' }} /> <span>Completed</span>
-                      <span style={{ width: 10 }} />
-                      <span style={{ width: 10, height: 10, background: '#2563eb', borderRadius: 10, display: 'inline-block' }} /> <span>Upcoming</span>
-                      <span style={{ width: 10 }} />
-                      <span style={{ width: 14, height: 10, background: '#123B73', display: 'inline-block', marginRight: 6 }} /> <span>Route</span>
-                      <span style={{ width: 10 }} />
-                      <span style={{ transform: 'rotate(0deg)', display: 'inline-block' }}>🚆</span> <span>Current Train</span>
-                    </div>
+                  <div className="route-legend">
+                    <span className="legend-item"><span className="legend-dot completed" /> Completed</span>
+                    <span className="legend-item"><span className="legend-dot current" /> Current/Next Halt</span>
+                    <span className="legend-item"><span className="legend-dot upcoming" /> Upcoming Halt</span>
                   </div>
                 </MapContainer>
               </div>
