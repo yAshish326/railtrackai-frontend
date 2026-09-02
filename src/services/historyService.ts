@@ -5,8 +5,49 @@ import type { HistoryFilters, HistoryRecord, HistoryType } from "../types/Histor
 
 const MAX_HISTORY_ITEMS = 250;
 
+function normalizeBackendHistoryRecord(record: unknown): HistoryRecord | null {
+  if (!record || typeof record !== "object") return null;
+
+  const raw = record as Record<string, unknown>;
+  const timestamp = raw.timestamp ?? raw.createdAt ?? raw.createdDate ?? raw.time;
+  const parsedTimestamp = timestamp ? new Date(String(timestamp)) : new Date(0);
+
+  return {
+    ...(raw as Partial<HistoryRecord>),
+    id: String(raw.id ?? crypto.randomUUID()),
+    searchType: String(raw.searchType ?? raw.type ?? "AI") as HistoryType,
+    parameters: (raw.parameters ?? raw.request ?? {}) as Record<string, string>,
+    request: (raw.request ?? raw.parameters ?? {}) as Record<string, string>,
+    response: raw.response,
+    responseSummary: String(raw.responseSummary ?? raw.summary ?? raw.message ?? "AI activity"),
+    timestamp: Number.isNaN(parsedTimestamp.getTime()) ? new Date(0).toISOString() : parsedTimestamp.toISOString(),
+  };
+}
+
 class HistoryService {
   private inFlightPosts = new Set<string>();
+
+  async getBackendAll(): Promise<HistoryRecord[]> {
+    const endpoints = ["/trains/history", "/pnr/history", "/ai/history"];
+    const responses = await Promise.allSettled(endpoints.map((endpoint) => api.get(endpoint)));
+
+    return responses.flatMap((result) => {
+      if (result.status !== "fulfilled") return [];
+
+      const raw = result.value.data as unknown;
+      if (Array.isArray(raw)) return raw.map(normalizeBackendHistoryRecord).filter((record): record is HistoryRecord => record !== null);
+
+      if (raw && typeof raw === "object") {
+        const body = raw as { data?: unknown; content?: unknown; history?: unknown; records?: unknown };
+        const records = body.data ?? body.content ?? body.history ?? body.records;
+        return Array.isArray(records)
+          ? records.map(normalizeBackendHistoryRecord).filter((record): record is HistoryRecord => record !== null)
+          : [];
+      }
+
+      return [];
+    });
+  }
 
   getAll(): HistoryRecord[] {
     return getJson<HistoryRecord[]>(HISTORY_STORAGE_KEY, []);

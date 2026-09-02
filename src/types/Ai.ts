@@ -20,3 +20,54 @@ export interface AiLimitSummary {
 	remaining: number;
 	resetAt: string;
 }
+
+export interface AiChatRequest {
+	message: string;
+}
+
+export interface AiChatResponse {
+	reply: string;
+}
+
+export interface AiChatResponseEnvelope {
+	reply?: string;
+	message?: string;
+	response?: string;
+	data?: AiChatResponseEnvelope;
+}
+
+export interface AiTrainAnalysisItem {
+	trainNumber: string;
+	trainName: string;
+	trainType: string;
+	source: {
+		code: string;
+		name: string;
+	};
+	destination: {
+		code: string;
+		name: string;
+	};
+	departure: string;
+	arrival: string;
+	duration: string;
+	distanceKm: number;
+	runningDays: string[];
+	availableClasses: string[];
+}
+
+export interface AiTrainAnalysisResponse {
+	insightMessage: string;
+	fastestTrain?: Record<string, unknown>;
+	longestTrain?: Record<string, unknown>;
+}
+
+export interface AiHistoryRecord {
+	id: string | number;
+	searchType: string;
+	parameters?: Record<string, unknown>;
+	request?: unknown;
+	response?: unknown;
+	responseSummary?: string;
+	timestamp: string;
+}

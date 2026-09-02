@@ -22,7 +22,6 @@ import {
 import pnrService from "../../services/pnrService";
 import aiService from "../../services/aiService";
 import { cacheService } from "../../services/cacheService";
-import { historyService } from "../../services/historyService";
 import { settingsService } from "../../services/settingsService";
 
 import type { PnrAnalysis, PnrData } from "../../types/Pnr";
@@ -275,17 +274,6 @@ export default function PnrEnquiryPage() {
 
         }
 
-
-        if (settings.history.autoSave) {
-
-          historyService.record(
-            "PNR",
-            { pnrNumber },
-            response.data.data,
-            `${response.data.data.trainName} (${response.data.data.trainNumber})`
-          );
-
-        }
 
       } else {
 

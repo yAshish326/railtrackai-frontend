@@ -216,7 +216,12 @@ $radius-lg: 18px;
   &:hover:not(:disabled) { background: var(--ent-accent-ink); }
 }
 
-.live-status-button { flex-shrink: 0; }
+.live-status-button {
+  flex: 0 0 auto;
+  min-width: 190px;
+  padding-inline: 16px;
+  justify-self: start;
+}
 
 // =========================================================
 // ERROR BANNER
@@ -467,8 +472,11 @@ $radius-lg: 18px;
 // =========================================================
 
 .live-journey-timeline {
-  padding: 28px 4px 8px;
+  position: relative;
+  z-index: 3;
+  padding: 42px 4px 8px;
   width: 100%;
+  overflow: visible;
 }
 
 .ljt-track {
@@ -476,6 +484,71 @@ $radius-lg: 18px;
   align-items: flex-start;
   width: 100%;
   gap: 0;
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.ljt-track {
+  align-items: flex-start;
+
+  .ljt-stop {
+    flex: 1 1 110px;
+    min-width: 90px;
+  }
+
+  .ljt-stop.origin,
+  .ljt-stop.destination {
+    flex: 0 1 132px;
+    min-width: 132px;
+  }
+
+  .ljt-stop.current {
+    flex: 0 1 120px;
+    min-width: 110px;
+  }
+}
+
+.ljt-expand-control,
+.ljt-collapse-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--ent-border);
+  border-radius: 999px;
+  background: var(--ent-surface);
+  color: var(--ent-accent);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: var(--ent-accent-soft);
+    border-color: var(--ent-accent);
+  }
+}
+
+.ljt-expand-control {
+  flex: 0 1 auto;
+  align-self: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 28px;
+  margin: 0 8px;
+  padding: 0 10px;
+
+  span {
+    min-width: 0;
+    overflow: visible;
+    text-align: center;
+  }
+}
+
+.ljt-collapse-control {
+  margin: 14px auto 0;
+  padding: 6px 10px;
 }
 
 .ljt-stop {
@@ -484,8 +557,8 @@ $radius-lg: 18px;
   flex-direction: column;
   align-items: center;
   flex: 1 1 0;
-  min-width: 0; // allow shrinking so the row never overflows the card
-  max-width: 140px;
+  min-width: 80px;
+  max-width: none;
 
   &:not(:last-child)::after {
     content: "";
@@ -553,30 +626,202 @@ $radius-lg: 18px;
   box-shadow: 0 0 0 4px var(--ent-accent-soft);
 }
 
+.ljt-stop.upcoming .ljt-dot {
+  background: var(--ent-surface);
+  border-color: var(--ent-accent);
+  box-shadow: 0 0 0 1px var(--ent-accent);
+}
+
 .ljt-label {
-  margin-top: 10px;
+  margin-top: 12px;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 8px;
   width: 100%;
   min-width: 0;
+  overflow: hidden;
+  min-height: 64px;
+
+  strong,
+  span {
+    min-height: 32px;
+  }
 
   strong {
     display: block;
     font-size: 12px;
     font-weight: 700;
     color: var(--ent-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    overflow: visible;
+    text-overflow: clip;
+    display: block;
   }
 
   span {
     display: block;
     margin-top: 2px;
+    min-height: 16px;
     font-size: 11px;
     color: var(--ent-slate-soft);
     white-space: nowrap;
   }
+}
+
+.ljt-current-badge {
+  position: absolute;
+  top: -30px;
+  bottom: auto;
+  left: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--ent-accent-soft);
+  color: var(--ent-accent);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.ljt-current-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+// Segment layout keeps the journey on one row. Groups own their disclosure
+// panel so expanding content never changes the position of the main nodes.
+.ljt-segment {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  min-width: 0;
+
+  &:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 100%;
+    height: 3px;
+    background: var(--ent-border);
+    z-index: 0;
+  }
+
+  &.ljt-origin-segment::after,
+  &.ljt-segment:has(.ljt-stop.past)::after {
+    background: var(--ent-accent);
+  }
+}
+
+.ljt-segment > .ljt-stop {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.ljt-origin-segment,
+.ljt-destination-segment {
+  flex: 0 1 148px;
+  min-width: 128px;
+}
+
+.ljt-group-slot {
+  position: relative;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1 1 96px;
+  min-width: 76px;
+  overflow: visible;
+}
+
+.ljt-group-node {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ent-surface);
+  border-radius: 50%;
+  background: var(--ent-accent);
+  box-shadow: 0 0 0 1px var(--ent-accent);
+  transform: translateX(-50%);
+}
+
+.ljt-group-slot .ljt-expand-control {
+  position: relative;
+  z-index: 2;
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  margin: 24px 4px 0;
+  padding: 5px 8px;
+}
+
+.ljt-group-slot .ljt-expand-control span {
+  white-space: nowrap;
+}
+
+.ljt-expanded-group {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 5;
+  box-sizing: border-box;
+  width: min(240px, calc(100vw - 32px));
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  border: 1px solid var(--ent-border);
+  border-radius: $radius-sm;
+  background: var(--ent-surface);
+  box-shadow: var(--ent-shadow);
+  transform: translateX(-50%);
+}
+
+.live-hero-card {
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+.ljt-expanded-group .ljt-stop {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px 4px;
+}
+
+.ljt-expanded-group .ljt-stop::after,
+.ljt-expanded-group .ljt-current-badge {
+  display: none;
+}
+
+.ljt-expanded-group .ljt-dot {
+  margin-top: 3px;
+}
+
+.ljt-expanded-group .ljt-label {
+  margin-top: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.ljt-expanded-group .ljt-label strong {
+  display: block;
+  white-space: normal;
+  word-break: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 // Origin & destination names: dark + bold, always fully visible.
@@ -586,40 +831,38 @@ $radius-lg: 18px;
   color: var(--ent-ink);
   overflow: visible;
   white-space: normal;
-  word-break: break-word;
-}
-
-.ljt-current-badge {
-  position: absolute;
-  top: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--ent-accent-soft);
-  color: var(--ent-accent);
-  font-size: 10.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  z-index: 2;
-
-  svg {
-    flex-shrink: 0;
-  }
+  word-break: normal;
 }
 
 @media (max-width: 720px) {
-  .ljt-stop { max-width: 96px; }
-  .ljt-stop.compact { flex-basis: 10px; max-width: 10px; }
+  .ljt-label { padding: 0 4px; }
+
+  .ljt-origin-segment,
+  .ljt-destination-segment {
+    flex-basis: 104px;
+    min-width: 104px;
+  }
+
+  .ljt-group-slot {
+    flex-basis: 64px;
+    min-width: 58px;
+  }
+
+  .ljt-group-slot .ljt-expand-control {
+    margin-inline: 2px;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  .ljt-group-slot .ljt-expand-control span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 @media (max-width: 480px) {
   .ljt-current-badge span { display: none; } // icon only on very small screens
   .ljt-label strong { font-size: 10.5px; }
-  .ljt-stop { max-width: 72px; }
 }
 
 .hero-detail-row {
@@ -703,6 +946,29 @@ $radius-lg: 18px;
     padding: 1px 5px;
     background: rgba(255, 255, 255, 0.75);
   }
+}
+
+// The connector is a single layer behind every timeline node. Station and
+// segment pseudo-elements are disabled below so they cannot create seams.
+.ljt-track-line {
+  position: absolute;
+  top: 5px;
+  left: clamp(52px, 10%, 76px);
+  right: clamp(52px, 10%, 76px);
+  z-index: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--ent-accent) 0 var(--timeline-progress),
+    var(--ent-border) var(--timeline-progress) 100%
+  );
+  pointer-events: none;
+}
+
+.ljt-stop::after,
+.ljt-segment::after {
+  display: none !important;
 }
 
 // Small, clean legend pinned to the bottom-left of the map — replaces the
@@ -797,7 +1063,10 @@ $radius-lg: 18px;
   .live-toolbar { flex-direction: column; align-items: stretch; }
   .field { min-width: 0; }
   .journey-date-field { max-width: none; }
-  .live-status-button { width: 100%; }
+  .live-status-button {
+    width: 100%;
+    justify-self: stretch;
+  }
 
   .live-hero-header { flex-direction: column; }
   .hero-top-right { align-items: flex-start; }
@@ -820,4 +1089,470 @@ $radius-lg: 18px;
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton-card { animation: none !important; }
+}
+// =========================================================
+// FINAL UI POLISH OVERRIDES — CLEAN LIVE JOURNEY TIMELINE
+// These rules intentionally come last so they override the
+// earlier timeline rules without changing application logic.
+// =========================================================
+
+.live-journey-timeline {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: 52px 8px 20px;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ljt-track,
+.ljt-track.expanded,
+.ljt-track.collapsed {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ljt-segment {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 116px;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ljt-segment:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--ent-border);
+  z-index: 0;
+}
+
+.ljt-segment.ljt-origin-segment::after,
+.ljt-segment:has(.ljt-stop.past)::after {
+  background: var(--ent-accent);
+}
+
+.ljt-origin-segment,
+.ljt-destination-segment {
+  flex: 0 1 150px;
+  min-width: 135px;
+}
+
+.ljt-segment > .ljt-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 145px;
+  min-width: 0;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+}
+
+.ljt-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ljt-group-slot {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 0 1 108px;
+  min-width: 92px;
+  height: 116px;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ljt-group-node {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ent-surface);
+  border-radius: 50%;
+  background: var(--ent-accent);
+  box-shadow: 0 0 0 1px var(--ent-accent);
+  transform: translateX(-50%);
+  box-sizing: border-box;
+}
+
+.ljt-expand-control,
+.ljt-collapse-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--ent-border);
+  border-radius: 999px;
+  background: var(--ent-surface);
+  color: var(--ent-accent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ljt-expand-control:hover,
+.ljt-collapse-control:hover {
+  background: var(--ent-accent-soft);
+  border-color: var(--ent-accent);
+  box-shadow: 0 2px 8px rgba(59, 91, 253, 0.08);
+}
+
+.ljt-group-slot .ljt-expand-control {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  max-width: calc(100% - 4px);
+  min-height: 34px;
+  margin: 27px 2px 0;
+  padding: 0 11px;
+}
+
+.ljt-group-slot .ljt-expand-control span {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.ljt-collapse-control {
+  margin: 16px auto 0;
+  padding: 7px 12px;
+}
+
+.ljt-dot {
+  position: relative;
+  z-index: 3;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--ent-accent);
+  border: 2px solid var(--ent-surface);
+  box-shadow: 0 0 0 1px var(--ent-border);
+  box-sizing: border-box;
+}
+
+.ljt-stop.compact .ljt-dot {
+  width: 7px;
+  height: 7px;
+  border-width: 1px;
+  opacity: 0.75;
+}
+
+.ljt-stop.origin .ljt-dot {
+  background: var(--ent-green);
+  box-shadow: 0 0 0 1px var(--ent-green);
+}
+
+.ljt-stop.destination .ljt-dot {
+  background: var(--ent-red);
+  box-shadow: 0 0 0 1px var(--ent-red);
+}
+
+.ljt-stop.past .ljt-dot {
+  background: var(--ent-green);
+}
+
+.ljt-stop.current .ljt-dot {
+  width: 14px;
+  height: 14px;
+  background: var(--ent-accent);
+  box-shadow: 0 0 0 4px var(--ent-accent-soft);
+}
+
+.ljt-stop.upcoming .ljt-dot {
+  background: var(--ent-surface);
+  border-color: var(--ent-accent);
+  box-shadow: 0 0 0 1px var(--ent-accent);
+}
+
+.ljt-label {
+  width: 100%;
+  margin-top: 12px;
+  padding: 0 5px;
+  min-width: 0;
+  min-height: 66px;
+  text-align: center;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.ljt-label strong {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: 700;
+  color: var(--ent-ink);
+  text-align: center;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.ljt-label span {
+  display: block;
+  margin-top: 5px;
+  min-height: 16px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--ent-slate-soft);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.ljt-stop.origin .ljt-label strong,
+.ljt-stop.destination .ljt-label strong,
+.ljt-stop.current .ljt-label strong {
+  font-weight: 800;
+}
+
+.ljt-current-badge {
+  position: absolute;
+  top: -39px;
+  left: 50%;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--ent-accent-soft);
+  color: var(--ent-accent);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+}
+
+.ljt-current-badge svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.ljt-expanded-group {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  z-index: 20;
+  width: 250px;
+  max-width: min(250px, calc(100vw - 32px));
+  max-height: 230px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--ent-border);
+  border-radius: $radius-md;
+  background: var(--ent-surface);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+  transform: translateX(-50%);
+  box-sizing: border-box;
+}
+
+.ljt-expanded-group .ljt-stop {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: 9px 6px;
+  border-bottom: 1px solid var(--ent-border);
+  box-sizing: border-box;
+}
+
+.ljt-expanded-group .ljt-stop:last-child {
+  border-bottom: none;
+}
+
+.ljt-expanded-group .ljt-stop::after,
+.ljt-expanded-group .ljt-current-badge {
+  display: none;
+}
+
+.ljt-expanded-group .ljt-dot {
+  margin-top: 3px;
+}
+
+.ljt-expanded-group .ljt-label {
+  width: auto;
+  margin-top: 0;
+  padding: 0;
+  min-height: 0;
+  text-align: left;
+}
+
+.ljt-expanded-group .ljt-label strong {
+  display: block;
+  min-height: 0;
+  font-size: 12px;
+  line-height: 17px;
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.ljt-expanded-group .ljt-label span {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: left;
+}
+
+.live-hero-card {
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+.live-journey-timeline,
+.ljt-track,
+.ljt-segment,
+.ljt-group-slot {
+  overflow: visible;
+}
+
+// ---------------------------------------------------------
+// RESPONSIVE FINAL OVERRIDES
+// ---------------------------------------------------------
+
+@media (max-width: 980px) {
+  .ljt-origin-segment,
+  .ljt-destination-segment {
+    flex-basis: 125px;
+    min-width: 115px;
+  }
+
+  .ljt-group-slot {
+    flex-basis: 92px;
+    min-width: 84px;
+  }
+
+  .ljt-segment > .ljt-stop {
+    max-width: 130px;
+  }
+}
+
+@media (max-width: 720px) {
+  .live-journey-timeline {
+    padding: 48px 2px 16px;
+  }
+
+  .ljt-origin-segment,
+  .ljt-destination-segment {
+    flex-basis: 105px;
+    min-width: 100px;
+  }
+
+  .ljt-group-slot {
+    flex-basis: 78px;
+    min-width: 72px;
+  }
+
+  .ljt-group-slot .ljt-expand-control {
+    margin-top: 27px;
+    padding-inline: 8px;
+    font-size: 10.5px;
+  }
+
+  .ljt-label {
+    padding-inline: 3px;
+  }
+
+  .ljt-label strong {
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .ljt-label span {
+    font-size: 10px;
+  }
+
+  .ljt-current-badge {
+    font-size: 10.5px;
+    padding: 5px 8px;
+  }
+
+  .ljt-expanded-group {
+    width: 230px;
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  .live-journey-timeline {
+    padding-inline: 0;
+  }
+
+  .ljt-origin-segment,
+  .ljt-destination-segment {
+    flex-basis: 90px;
+    min-width: 86px;
+  }
+
+  .ljt-group-slot {
+    flex-basis: 66px;
+    min-width: 62px;
+  }
+
+  .ljt-group-slot .ljt-expand-control {
+    padding-inline: 6px;
+    font-size: 10px;
+  }
+
+  .ljt-current-badge span {
+    display: none;
+  }
+
+  .ljt-label strong {
+    font-size: 10.5px;
+    line-height: 15px;
+  }
+
+  .ljt-expanded-group {
+    width: 220px;
+  }
 }

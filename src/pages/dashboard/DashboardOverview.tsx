@@ -8,6 +8,7 @@ import { historyService } from "../../services/historyService";
 import { useAuthStore } from "../../store/authStore";
 import { ROUTES } from "../../utils/constants";
 import { safeValue } from "../../utils/helpers";
+import type { HistoryRecord } from "../../types/History";
 
 import "./DashboardOverview.scss";
 
@@ -46,11 +47,13 @@ function getGreeting(): string {
 }
 
 function formatRelativeTime(value?: string): string {
-  if (!value) return "Just now";
+  if (!value) return "Date unavailable";
   const now = Date.now();
   const then = new Date(value).getTime();
+  if (!Number.isFinite(then) || then <= 0) return "Date unavailable";
   const diffSeconds = Math.floor((now - then) / 1000);
 
+  if (diffSeconds < 0) return "Just now";
   if (diffSeconds < 60) return `${diffSeconds}s ago`;
   if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
   if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
@@ -92,6 +95,7 @@ export default function DashboardOverview() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [backendSummary, setBackendSummary] = useState<BackendDashboardSummary | null>(null);
+  const [backendHistory, setBackendHistory] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiPrompt, setAiPrompt] = useState("");
   const historyRecords = useMemo(() => historyService.list({ sort: "newest" }), []);
@@ -100,39 +104,36 @@ export default function DashboardOverview() {
     let active = true;
     setLoading(true);
 
-    dashboardService
-      .getSummary()
-      .then((response) => {
-        // Accept both API shapes:
-        // 1) { success: true, data: { stats: ..., recentActivity: [...] } }
-        // 2) { stats: ..., recentActivity: [...], user: ... }
-        const raw = response.data as unknown;
-        if (!active) return;
+    async function loadDashboardActivity() {
+      let summary: BackendDashboardSummary | null = null;
 
+      try {
+        const response = await dashboardService.getSummary();
+        const payload = response.data as { success?: boolean; data?: BackendDashboardSummary } | BackendDashboardSummary;
+        summary = (payload as { success?: boolean; data?: BackendDashboardSummary }).success
+          ? (payload as { data?: BackendDashboardSummary }).data ?? null
+          : payload as BackendDashboardSummary;
+      } catch {
+        summary = null;
+      }
+
+      if (!active) return;
+      setBackendSummary(summary);
+
+      // The summary is the preferred single request. Only call the separate
+      // history endpoints when it does not contain activity rows.
+      if (!summary?.recentActivity?.length) {
         try {
-          const payload = raw as { success?: boolean; data?: BackendDashboardSummary } | BackendDashboardSummary;
-
-          if ((payload as any).success && (payload as any).data) {
-            setBackendSummary((payload as any).data as BackendDashboardSummary);
-            return;
-          }
-
-          // If the response already looks like the summary object, use it directly
-          const asSummary = payload as BackendDashboardSummary;
-          if (asSummary && (asSummary.stats || asSummary.recentActivity)) {
-            setBackendSummary(asSummary);
-            return;
-          }
+          setBackendHistory(await historyService.getBackendAll());
         } catch {
-          // fallthrough — leave backendSummary as null
+          setBackendHistory([]);
         }
-      })
-      .catch(() => {
-        if (active) setBackendSummary(null);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      }
+
+      if (active) setLoading(false);
+    }
+
+    void loadDashboardActivity();
 
     return () => {
       active = false;
@@ -140,11 +141,17 @@ export default function DashboardOverview() {
   }, []);
 
   const recentActivity = useMemo(() => {
+    if (backendHistory.length > 0) {
+      return backendHistory
+        .slice()
+        .sort((left, right) => new Date(right.timestamp ?? 0).getTime() - new Date(left.timestamp ?? 0).getTime())
+        .slice(0, 5);
+    }
     if (backendSummary?.recentActivity?.length) {
       return backendSummary.recentActivity.slice(0, 5);
     }
     return historyRecords.slice(0, 5);
-  }, [backendSummary, historyRecords]);
+  }, [backendHistory, backendSummary, historyRecords]);
 
   const stats = useMemo(
     () => ({
