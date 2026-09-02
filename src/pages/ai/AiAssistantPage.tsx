@@ -15,10 +15,9 @@ import {
   Trash2,
 } from "lucide-react";
 
-import aiService, { type AiChatResponse } from "../../services/aiService";
-import type { AiLimitSummary } from "../../types/Ai";
+import aiService from "../../services/aiService";
+import type { AiChatResponseEnvelope, AiLimitSummary } from "../../types/Ai";
 import { cacheService } from "../../services/cacheService";
-import { historyService } from "../../services/historyService";
 import { settingsService } from "../../services/settingsService";
 import { AI_ACTIVE_CONVERSATION_KEY, AI_CONVERSATIONS_STORAGE_KEY } from "../../utils/constants";
 import { formatCompactTime, formatDateTime, getApiErrorMessage } from "../../utils/helpers";
@@ -396,11 +395,18 @@ export default function AiAssistantPage() {
 
     try {
       const response = await aiService.sendMessage({ message });
-      const payload = response.data as AiChatResponse;
+      const payload = response.data as AiChatResponseEnvelope;
+      const responseBody = payload.data ?? payload;
+      const reply = responseBody.reply ?? responseBody.message ?? responseBody.response;
+
+      if (!reply?.trim()) {
+        throw new Error("The AI returned an empty response. Please try again.");
+      }
+
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: payload.response,
+        content: reply.trim(),
         createdAt: new Date().toISOString(),
       };
 
@@ -421,10 +427,6 @@ export default function AiAssistantPage() {
       if (settings.cache.enabled) {
         cacheService.set("AI", { conversationId }, payload, settings.cache.ttlMinutes * 60 * 1000);
       }
-      if (settings.history.autoSave) {
-        historyService.record("AI", { conversationId, message }, payload, payload.response.slice(0, 80));
-      }
-
       setSnackbar({ message: "AI response received.", tone: "success" });
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -469,7 +471,9 @@ export default function AiAssistantPage() {
   }
 
   const activeMessages = activeConversation?.messages ?? [];
-  const remainingLimitText = limitSummary ? `${limitSummary.remaining} remaining` : "Usage limit unavailable";
+  const remainingLimitText = limitSummary
+    ? `${limitSummary.remaining} / ${limitSummary.limit} messages remaining`
+    : "Usage limit unavailable";
 
   return (
     <div className="ai-shell ai-assistant-shell">
@@ -486,7 +490,7 @@ export default function AiAssistantPage() {
             {limitSummary ? <small>Resets at {formatLimitReset(limitSummary)}</small> : null}
           </div>
           <div className="assistant-limit-actions">
-            <span className="meta-chip">{limitSummary ? `${limitSummary.used}/${limitSummary.limit}` : "Synced"}</span>
+            <span className="meta-chip">{limitSummary ? `${limitSummary.used}/${limitSummary.limit} used` : "Synced"}</span>
             <button type="button" className="meta-chip refresh-chip" onClick={() => void refreshLimit()} disabled={loading}>
               Refresh
             </button>
@@ -608,7 +612,7 @@ export default function AiAssistantPage() {
               rows={1}
               placeholder="Ask a question about trains, PNR, station boards, or routes..."
             />
-            <button type="submit" className="btn btn-primary send-button" disabled={loading || !input.trim()}>
+            <button type="submit" className="btn btn-primary send-button" disabled={loading || !input.trim() || limitSummary?.remaining === 0}>
               <PlayCircle size={16} /> Send
             </button>
           </div>

@@ -269,8 +269,15 @@ export default function SearchTrainPage() {
       return null;
     }
 
+    const hasRecommendations = Boolean(fastest?.number || longest?.number);
+    const normalizedMessage = typeof insightMessage === "string" ? insightMessage.trim() : "";
+    const isFailureMessage = /\b(?:couldn't|could not|unable|failed|error|unavailable)\b/i.test(normalizedMessage);
+
     return {
-      insightMessage: typeof insightMessage === "string" && insightMessage.trim() ? insightMessage.trim() : "AI recommendations are ready for this route.",
+      insightMessage:
+        normalizedMessage && !(hasRecommendations && isFailureMessage)
+          ? normalizedMessage
+          : "AI recommendations are ready for this route.",
       fastestTrain: fastest?.number ? { number: fastest.number } : undefined,
       longestTrain: longest?.number ? { number: longest.number } : undefined,
     };

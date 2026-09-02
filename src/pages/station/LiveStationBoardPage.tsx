@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap, Marker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { AlertTriangle, MapPinned, Search, TrainFront } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, MapPinned, Search, TrainFront } from "lucide-react";
 
 import trainService from "../../services/trainService";
 import { cacheService } from "../../services/cacheService";
@@ -46,7 +46,9 @@ type JourneyStation = {
   isOrigin: boolean;
   isDestination: boolean;
   isCurrent: boolean;
+  isUpcoming: boolean;
   isPast: boolean;
+  hasHalt: boolean;
   // Kept for compatibility with the existing timeline implementation.
   // Currently we do not hide stations just because the list is large.
   isCompact: boolean;
@@ -74,11 +76,6 @@ interface LiveTrainSnapshot {
   routeCoordinates?: LiveStationPoint[];
 }
 
-// =========================================================
-// LOCAL STORAGE — persists the last live search so a page
-// refresh restores it without re-hitting the API.
-// =========================================================
-
 const LIVE_STATUS_STORAGE_KEY = "railtrack_live_status";
 
 interface LocalLiveSearch {
@@ -104,7 +101,6 @@ function getLocalLiveSearch(trainNumber?: string, date?: string): LocalLiveSearc
 
     return parsed;
   } catch (error) {
-    // localStorage must never break the live-status page.
     console.debug("Unable to read local live status:", error);
     return null;
   }
@@ -123,7 +119,6 @@ function saveLocalLiveSearch(trainNumber: string, date: string, response: LiveTr
     };
     window.localStorage.setItem(LIVE_STATUS_STORAGE_KEY, JSON.stringify(localData));
   } catch (error) {
-    // Do not let localStorage quota/security problems break the app.
     console.debug("Unable to save live status locally:", error);
   }
 }
@@ -141,6 +136,23 @@ function matchesStation(value?: string | null, candidate?: string | null) {
   const right = normalizeStationText(candidate);
   if (!left || !right) return false;
   return left === right || right.includes(left) || left.includes(right);
+}
+
+function trimRouteAtDestination(stations: any[]): any[] {
+  if (stations.length < 2) return stations;
+
+  const ordered = [...stations].sort((left, right) => Number(left.sequence ?? 0) - Number(right.sequence ?? 0));
+  const origin = ordered[0];
+  const destination = ordered[ordered.length - 1];
+  const destinationIndex = ordered.findIndex((station, index) =>
+    index > 0 && (
+      (destination.stationCode && station.stationCode === destination.stationCode) ||
+      (destination.stationName && station.stationName === destination.stationName)
+    ),
+  );
+
+  if (destinationIndex > 0) return ordered.slice(0, destinationIndex + 1);
+  return origin ? ordered : stations;
 }
 
 function FitBounds({ points }: { points: [number, number][] }) {
@@ -182,6 +194,7 @@ export default function LiveStationBoardPage() {
   // Restore from localStorage first; existing cache remains as fallback.
   const [data, setData] = useState<LiveTrainSnapshot | null>(localCached?.response ?? cached?.response ?? null);
   const [routeFallbackStations, setRouteFallbackStations] = useState<StationPoint[]>(localCached?.routeStations ?? []);
+  const [expandedTimelineGroup, setExpandedTimelineGroup] = useState<string | null>(null);
 
   const parseCoord = useCallback((value: unknown) => {
     if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
@@ -204,7 +217,10 @@ export default function LiveStationBoardPage() {
 
     try {
       const response = await trainService.getLiveStatus(finalNumber, finalDate);
-      const payload = response.data as LiveTrainSnapshot;
+      const responseBody = response.data as { success?: boolean; data?: LiveTrainSnapshot } | LiveTrainSnapshot;
+      const payload = "data" in responseBody && responseBody.data
+        ? responseBody.data
+        : responseBody as LiveTrainSnapshot;
       setData(payload);
 
       const settings = settingsService.getSettings();
@@ -237,7 +253,7 @@ export default function LiveStationBoardPage() {
           }
         }
 
-        const mapped: StationPoint[] = stations
+        const mapped: StationPoint[] = trimRouteAtDestination(stations)
           .map((s) => {
             const lat = parseCoord(s.latitude);
             const lng = parseCoord(s.longitude);
@@ -305,10 +321,6 @@ export default function LiveStationBoardPage() {
   }, [data, parseCoord, routeFallbackStations]);
 
   const currentLocationPoint = useMemo<[number, number] | null>(() => {
-    const lat = parseCoord(data?.latitude);
-    const lng = parseCoord(data?.longitude);
-    if (lat !== undefined && lng !== undefined) return [lat, lng];
-
     // Fall back to matching the current station name/code against the route.
     const stationLookup: Array<{ lat?: number; lng?: number; code?: string; name?: string }> =
       routeFallbackStations.length > 0
@@ -321,14 +333,20 @@ export default function LiveStationBoardPage() {
           }));
 
     const currentKey = data?.currentStation ?? data?.currentLocation ?? data?.nextStation;
-    if (!currentKey) return null;
+    if (currentKey) {
+      const matched = stationLookup.find((s) => {
+        if (typeof s.lat !== "number" || typeof s.lng !== "number") return false;
+        return matchesStation(currentKey, s.code) || matchesStation(currentKey, s.name);
+      });
 
-    const matched = stationLookup.find((s) => {
-      if (typeof s.lat !== "number" || typeof s.lng !== "number") return false;
-      return matchesStation(currentKey, s.code) || matchesStation(currentKey, s.name);
-    });
+      if (matched && typeof matched.lat === "number" && typeof matched.lng === "number") {
+        return [matched.lat, matched.lng];
+      }
+    }
 
-    return matched && typeof matched.lat === "number" && typeof matched.lng === "number" ? [matched.lat, matched.lng] : null;
+    const lat = parseCoord(data?.latitude);
+    const lng = parseCoord(data?.longitude);
+    return lat !== undefined && lng !== undefined ? [lat, lng] : null;
   }, [data, parseCoord, routeFallbackStations]);
 
   const mapPoints = currentLocationPoint ? [currentLocationPoint] : routePoints;
@@ -374,8 +392,8 @@ export default function LiveStationBoardPage() {
     return "Unknown";
   })();
 
-  // Prefer the full route (haltMinutes + lat/lng); keep origin, destination,
-  // actual halts and the current station — drop plain pass-through points.
+  // Keep the timeline focused on the active journey milestones. The complete
+  // route remains available to the map polyline, while this list stays readable.
   const journeyStations = useMemo<JourneyStation[]>(() => {
     const source: Array<LiveStationPoint & { haltMinutes?: number | null }> =
       routeFallbackStations.length > 0
@@ -396,36 +414,60 @@ export default function LiveStationBoardPage() {
 
     if (!source || source.length === 0) return [];
 
-    const currentLabel = (data?.currentStation ?? data?.currentLocation ?? "").toLowerCase().trim();
+    const currentLabel = data?.currentStation ?? data?.currentLocation ?? "";
+    const previousLabel = data?.previousStation ?? "";
 
     let currentIdx = currentLabel
       ? source.findIndex((s) => {
-          const name = (s.name ?? (s as any).stationName ?? "").toLowerCase().trim();
-          const code = (s.code ?? (s as any).stationCode ?? "").toLowerCase().trim();
-          return name === currentLabel || code === currentLabel;
+          const name = s.name ?? (s as any).stationName;
+          const code = s.code ?? (s as any).stationCode;
+          return matchesStation(currentLabel, name) || matchesStation(currentLabel, code);
         })
       : -1;
 
-    if (currentIdx === -1 && currentLabel) {
-      currentIdx = source.findIndex((s) => {
-        const name = (s.name ?? (s as any).stationName ?? "").toLowerCase().trim();
-        return Boolean(name) && (currentLabel.includes(name) || name.includes(currentLabel));
-      });
-    }
+    const matchedPreviousIdx = previousLabel
+      ? source.findIndex((s) => {
+          const name = s.name ?? (s as any).stationName;
+          const code = s.code ?? (s as any).stationCode;
+          return matchesStation(previousLabel, name) || matchesStation(previousLabel, code);
+        })
+      : -1;
+
+    const previousIdx = matchedPreviousIdx >= 0
+      ? matchedPreviousIdx
+      : currentIdx > 0
+      ? currentIdx - 1
+      : -1;
 
     const lastIdx = source.length - 1;
+    const explicitUpcomingIndexes = (data?.upcomingStations ?? [])
+      .slice(0, 2)
+      .map((upcoming) => source.findIndex((station) => {
+        const name = station.name ?? (station as any).stationName;
+        const code = station.code ?? (station as any).stationCode;
+        return matchesStation(upcoming.name, name) || matchesStation(upcoming.code, code);
+      }))
+      .filter((idx) => idx >= 0 && idx !== currentIdx && idx !== previousIdx);
 
-    const kept = source
-      .map((s, idx) => ({ s, idx }))
-      .filter(({ s, idx }) => {
-        const isHalt = Number(s.haltMinutes ?? s.halt ?? s.halt_min ?? 0) > 0;
-        return isHalt || idx === 0 || idx === lastIdx || idx === currentIdx;
-      });
+    const upcomingHaltIndexes = source
+      .map((station, idx) => ({ station, idx }))
+      .filter(({ station, idx }) =>
+        idx > currentIdx &&
+        idx !== lastIdx &&
+        Number(station.haltMinutes ?? station.halt ?? station.halt_min ?? 0) > 0,
+      )
+      .map(({ idx }) => idx);
 
-    return kept.map(({ s, idx }) => {
+    const upcomingIndexes = [...new Set([...explicitUpcomingIndexes, ...upcomingHaltIndexes])]
+      .sort((left, right) => left - right)
+      .slice(0, 2);
+
+    return source.map((s, idx) => {
       const isOrigin = idx === 0;
       const isDestination = idx === lastIdx;
       const isCurrent = idx === currentIdx;
+      const isUpcoming = upcomingIndexes.includes(idx) && !isCurrent;
+      const hasHalt = Number(s.haltMinutes ?? s.halt ?? s.halt_min ?? 0) > 0;
       return {
         code: s.code ?? (s as any).stationCode,
         name: (s.name ?? (s as any).stationName ?? s.code ?? "Station") as string,
@@ -435,17 +477,86 @@ export default function LiveStationBoardPage() {
         isOrigin,
         isDestination,
         isCurrent,
+        isUpcoming,
         isPast: currentIdx >= 0 ? idx < currentIdx : false,
-        // We are not hiding important stations — all retained stops render normally.
+        hasHalt,
         isCompact: false,
       };
     });
   }, [data, routeFallbackStations, parseCoord]);
 
-  const mapStations = useMemo(
-    () => journeyStations.filter((s): s is JourneyStation & { lat: number; lng: number } => s.lat !== undefined && s.lng !== undefined),
+  const timelineStations = useMemo(
+    () => journeyStations.filter((station) => station.isOrigin || station.isDestination || station.hasHalt || station.isCurrent),
     [journeyStations],
   );
+
+  const timelineItems = useMemo(() => {
+    type TimelineItem =
+      | { kind: "station"; index: number }
+      | { kind: "group"; id: string; indexes: number[] };
+
+    if (timelineStations.length <= 6) {
+      return timelineStations.map((_, index): TimelineItem => ({ kind: "station", index }));
+    }
+
+    const currentIndex = timelineStations.findIndex((station) => station.isCurrent);
+    const nextIndex = timelineStations.findIndex((station, index) =>
+      index > currentIndex && station.isUpcoming,
+    );
+    const importantIndexes = new Set<number>([0, timelineStations.length - 1]);
+    if (currentIndex >= 0) {
+      importantIndexes.add(currentIndex);
+    }
+    if (nextIndex >= 0) importantIndexes.add(nextIndex);
+
+    const sortedImportant = [...importantIndexes].sort((left, right) => left - right);
+    const items: TimelineItem[] = [];
+    sortedImportant.forEach((stationIndex, position) => {
+      const previousIndex = sortedImportant[position - 1];
+      const hiddenIndexes = timelineStations
+        .map((_, index) => index)
+        .filter((index) => index > (previousIndex ?? -1) && index < stationIndex);
+
+      if (hiddenIndexes.length > 0) {
+        items.push({ kind: "group", id: `timeline-group-${hiddenIndexes[0]}`, indexes: hiddenIndexes });
+      }
+      items.push({ kind: "station", index: stationIndex });
+    });
+
+    return items;
+  }, [timelineStations]);
+
+  const mapStations = useMemo(
+    () => timelineStations.filter((s): s is JourneyStation & { lat: number; lng: number } => s.lat !== undefined && s.lng !== undefined),
+    [timelineStations],
+  );
+
+  const currentTimelineItemIndex = timelineItems.findIndex(
+    (item) => item.kind === "station" && timelineStations[item.index].isCurrent,
+  );
+  const timelineProgress = currentTimelineItemIndex >= 0 && timelineItems.length > 1
+    ? `${(currentTimelineItemIndex / (timelineItems.length - 1)) * 100}%`
+    : "0%";
+
+  function renderTimelineStation(station: JourneyStation, index: number) {
+    return (
+      <div key={`${station.code ?? station.name}-${index}`} className={[
+        "ljt-stop",
+        station.isOrigin ? "origin" : "",
+        station.isDestination ? "destination" : "",
+        station.isCurrent ? "current" : "",
+        station.isUpcoming ? "upcoming" : "",
+        station.isPast ? "past" : "",
+      ].filter(Boolean).join(" ")}>
+        {station.isCurrent && <div className="ljt-current-badge"><span>Current Location</span><TrainFront size={16} /></div>}
+        <span className="ljt-dot" />
+        <div className="ljt-label">
+          <strong title={station.name}>{station.name}</strong>
+          {station.time && <span>{station.isDestination ? "Arr" : "Dep"} {station.time}</span>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="enterprise-page live-status-page">
@@ -533,37 +644,46 @@ export default function LiveStationBoardPage() {
                 <p className="hero-status-caption">{statusText}</p>
               </div>
 
-              {journeyStations.length > 0 ? (
+              {timelineStations.length > 0 ? (
                 <div className="live-journey-timeline">
                   <div className="ljt-track">
-                    {journeyStations.map((station, idx) => (
-                      <div
-                        key={`${station.code ?? station.name}-${idx}`}
-                        className={[
-                          "ljt-stop",
-                          station.isOrigin ? "origin" : "",
-                          station.isDestination ? "destination" : "",
-                          station.isCurrent ? "current" : "",
-                          station.isPast ? "past" : "",
-                        ].filter(Boolean).join(" ")}
-                      >
-                        {station.isCurrent && (
-                          <div className="ljt-current-badge">
-                            <span>Current Location</span>
-                            <TrainFront size={16} />
+                    <div
+                      className="ljt-track-line"
+                      style={{ "--timeline-progress": timelineProgress } as CSSProperties}
+                      aria-hidden="true"
+                    />
+                    {timelineItems.map((item) => {
+                      if (item.kind === "station") {
+                        const station = timelineStations[item.index];
+                        return (
+                          <div key={`station-segment-${item.index}`} className={`ljt-segment ${station.isOrigin ? "ljt-origin-segment" : ""} ${station.isDestination ? "ljt-destination-segment" : ""}`}>
+                            {renderTimelineStation(station, item.index)}
                           </div>
-                        )}
+                        );
+                      }
 
-                        <span className="ljt-dot" />
-
-                        <div className="ljt-label">
-                          <strong title={station.name}>{station.name}</strong>
-                          {station.time && (
-                            <span>{station.isDestination ? "Arr" : "Dep"} {station.time}</span>
+                      const isExpanded = expandedTimelineGroup === item.id;
+                      return (
+                        <div key={item.id} className={`ljt-segment ljt-group-slot ${isExpanded ? "is-expanded" : ""}`}>
+                          <span className="ljt-group-node" aria-hidden="true" />
+                          <button
+                            type="button"
+                            className="ljt-expand-control"
+                            onClick={() => setExpandedTimelineGroup(isExpanded ? null : item.id)}
+                            aria-expanded={isExpanded}
+                            aria-label={`${isExpanded ? "Hide" : "Show"} ${item.indexes.length} stations`}
+                          >
+                            <span>{isExpanded ? "Hide stations" : `+ ${item.indexes.length} station${item.indexes.length === 1 ? "" : "s"}`}</span>
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </button>
+                          {isExpanded && (
+                            <div className="ljt-expanded-group">
+                              {item.indexes.map((index) => renderTimelineStation(timelineStations[index], index))}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -606,7 +726,6 @@ export default function LiveStationBoardPage() {
                   )}
 
                   {mapStations.map((station, idx) => {
-                    const darkBlue = "#123B73";
                     const green = "#16a34a";
                     const blue = "#2563eb";
                     const outline = "#94a3b8";
@@ -615,12 +734,16 @@ export default function LiveStationBoardPage() {
                     let radius = 5.5;
                     let fillOpacity = 0.7;
 
-                    if (station.isOrigin || station.isDestination) {
-                      color = darkBlue; radius = 8; fillOpacity = 1;
-                    } else if (station.isCurrent) {
+                    if (station.isCurrent) {
                       color = blue; radius = 8; fillOpacity = 1;
+                    } else if (station.isOrigin) {
+                      color = green; radius = 8; fillOpacity = 1;
+                    } else if (station.isDestination) {
+                      color = "#dc2626"; radius = 8; fillOpacity = 1;
                     } else if (station.isPast) {
                       color = green; radius = 5.5; fillOpacity = 0.95;
+                    } else if (station.isUpcoming) {
+                      color = blue; radius = 5.5; fillOpacity = 0.25;
                     }
 
                     return (
